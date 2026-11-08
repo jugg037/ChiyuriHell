@@ -31,7 +31,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="42dp"
+            android:layout_marginTop="36dp"
             android:background="@color/hell_panel"
             android:orientation="vertical"
             android:padding="22dp">
@@ -40,42 +40,44 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:text="ИНФРАСТРУКТУРА НЕ НАСТРОЕНА"
+                android:text="ИМПОРТИРУЙТЕ ПРОФИЛЬ"
                 android:textColor="@color/hell_bright_red"
                 android:textSize="16sp"
                 android:textStyle="bold" />
             <TextView
+                android:id="@+id/profileStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:gravity="center"
-                android:text="Полнотуннельный режим ALL&#10;Серверная политика MIXED"
+                android:text="Полнотуннельный режим ALL • WireGuard"
+                android:textColor="@color/hell_muted"
+                android:textSize="13sp" />
+            <Button
+                android:id="@+id/importButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="22dp"
+                android:backgroundTint="@color/hell_panel"
+                android:text="ИМПОРТИРОВАТЬ ПРОФИЛЬ .CONF"
                 android:textColor="@color/hell_text"
-                android:textSize="14sp" />
+                android:textStyle="bold" />
             <Button
                 android:id="@+id/connectButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:layout_marginTop="26dp"
+                android:layout_marginTop="12dp"
                 android:backgroundTint="@color/hell_red"
                 android:enabled="false"
                 android:text="ПОДКЛЮЧИТЬСЯ"
                 android:textColor="@color/hell_text"
                 android:textStyle="bold" />
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:text="Подключение станет доступно после интеграции проверенного VPN-ядра и серверных профилей."
-                android:textColor="@color/hell_muted"
-                android:textSize="12sp" />
         </LinearLayout>
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:text="СОСТОЯНИЕ ПРОЕКТА"
+            android:layout_marginTop="26dp"
+            android:text="ПРОВЕРКИ РЕЖИМА ALL"
             android:textColor="@color/hell_bright_red"
             android:textSize="13sp"
             android:textStyle="bold" />
@@ -85,10 +87,17 @@
             android:layout_marginTop="10dp"
             android:background="@color/hell_panel"
             android:padding="16dp"
-            android:text="✓ Android 10+&#10;✓ Основа интерфейса&#10;✓ Декларация Android VPN Service&#10;• VPN-ядро: в разработке&#10;• Каталог доверенных серверов: в разработке&#10;• Защита от утечек и аварийная блокировка: впереди"
+            android:text="• IPv4 и IPv6 адреса интерфейса&#10;• Маршруты 0.0.0.0/0 и ::/0&#10;• DNS-сервер в профиле&#10;• Без исключённых приложений&#10;• Один проверяемый WireGuard peer"
             android:textColor="@color/hell_text"
             android:textSize="14sp"
             android:lineSpacingExtra="6dp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="Профиль пока хранится только в памяти приложения. Не импортируйте конфигурации от неизвестных операторов: они могут видеть метаданные вашего трафика."
+            android:textColor="@color/hell_muted"
+            android:textSize="12sp" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
