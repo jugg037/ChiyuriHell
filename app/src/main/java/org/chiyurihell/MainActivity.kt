@@ -6,6 +6,7 @@ import android.net.VpnService
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
+import com.wireguard.android.backend.Tunnel
 import org.chiyurihell.vpn.WireGuardController
 import org.chiyurihell.vpn.WireGuardProfilePolicy
 import java.io.ByteArrayOutputStream
@@ -19,20 +20,18 @@ class MainActivity : Activity() {
     }
 
     private val executor = Executors.newSingleThreadExecutor()
-
     private lateinit var statusView: TextView
     private lateinit var profileView: TextView
     private lateinit var importButton: Button
     private lateinit var connectButton: Button
 
-    private val stateListener: (com.wireguard.android.backend.Tunnel.State) -> Unit = { state ->
+    private val stateListener: (Tunnel.State) -> Unit = { state ->
         runOnUiThread { renderState(state) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         WireGuardController.initialize(applicationContext)
 
         statusView = findViewById(R.id.connectionStatus)
@@ -42,8 +41,8 @@ class MainActivity : Activity() {
 
         importButton.setOnClickListener { chooseProfile() }
         connectButton.setOnClickListener { toggleTunnel() }
-
         WireGuardController.stateListener = stateListener
+
         renderState(WireGuardController.currentState())
         if (WireGuardController.profile != null) {
             profileView.text = "WireGuard • IPv4 + IPv6 • DNS • ALL"
@@ -59,20 +58,21 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
-        if (WireGuardController.stateListener === stateListener) {
+        if (::connectButton.isInitialized && WireGuardController.stateListener === stateListener) {
             WireGuardController.stateListener = null
         }
         super.onDestroy()
     }
 
-    private fun renderState(state: com.wireguard.android.backend.Tunnel.State) {
+    private fun renderState(state: Tunnel.State) {
         when (state) {
-            com.wireguard.android.backend.Tunnel.State.UP -> {
+            Tunnel.State.UP -> {
                 statusView.text = "ЗАЩИЩЁННОЕ СОЕДИНЕНИЕ АКТИВНО"
                 connectButton.text = "ОТКЛЮЧИТЬСЯ"
                 connectButton.isEnabled = true
+                importButton.isEnabled = false
             }
-            com.wireguard.android.backend.Tunnel.State.DOWN -> {
+            Tunnel.State.DOWN -> {
                 statusView.text = if (WireGuardController.profile == null) {
                     "ИМПОРТИРУЙТЕ ПРОФИЛЬ"
                 } else {
@@ -80,15 +80,21 @@ class MainActivity : Activity() {
                 }
                 connectButton.text = "ПОДКЛЮЧИТЬСЯ"
                 connectButton.isEnabled = WireGuardController.profile != null
+                importButton.isEnabled = true
             }
-            com.wireguard.android.backend.Tunnel.State.TOGGLE -> {
+            Tunnel.State.TOGGLE -> {
                 statusView.text = "ИЗМЕНЕНИЕ СОЕДИНЕНИЯ…"
                 connectButton.isEnabled = false
+                importButton.isEnabled = false
             }
         }
     }
 
     private fun chooseProfile() {
+        if (WireGuardController.currentState() == Tunnel.State.UP) {
+            statusView.text = "СНАЧАЛА ОТКЛЮЧИТЕ ТУННЕЛЬ"
+            return
+        }
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "*/*"
@@ -163,7 +169,6 @@ class MainActivity : Activity() {
             statusView.text = "СНАЧАЛА ИМПОРТИРУЙТЕ ПРОФИЛЬ"
             return
         }
-
         connectButton.isEnabled = false
         statusView.text = "ПОДГОТОВКА СОЕДИНЕНИЯ…"
 
