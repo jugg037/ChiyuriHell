@@ -29,7 +29,7 @@ Profiles missing any requirement are rejected before the connect control is enab
 
 DISCONNECTED -> VPN_PERMISSION -> CONNECTING -> CONNECTED
 
-Failure returns to DISCONNECTED/ERROR. The UI only reports connected after the WireGuard backend reports Tunnel.State.UP. A permission denial must not leave the connect control disabled.
+Failure returns to DISCONNECTED/ERROR. The UI only reports connected after the WireGuard backend reports Tunnel.State.UP. A permission denial must not leave the connect control disabled. Android Always-on VPN is explicitly disabled until secure profile persistence and the restart callback are implemented. The current build is not a system-wide kill switch: traffic may fall back to the underlying network after the VPN stops.
 
 ## Server profile requirements
 
