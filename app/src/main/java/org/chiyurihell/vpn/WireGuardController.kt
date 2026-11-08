@@ -4,14 +4,16 @@ import android.content.Context
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
+import java.util.concurrent.Executors
 
 /**
- * Process-wide owner for the WireGuard backend.
- * Keeping the Tunnel identity stable avoids losing backend state on Activity recreation.
- * Profile persistence is handled separately by EncryptedProfileStore.
+ * Process-wide owner for the WireGuard backend and stable Tunnel identity.
+ * Always-on recovery is entered only from GoBackend's documented system-start callback.
  */
 object WireGuardController : Tunnel {
     private var backend: GoBackend? = null
+    private var appContext: Context? = null
+    private val recoveryExecutor = Executors.newSingleThreadExecutor()
 
     @Volatile
     var profile: Config? = null
@@ -28,11 +30,18 @@ object WireGuardController : Tunnel {
     var initializationError: String? = null
         private set
 
+    @Volatile
+    var recoveryError: String? = null
+        private set
+
     @Synchronized
     fun initialize(context: Context) {
         if (backend != null || initializationError != null) return
+        val applicationContext = context.applicationContext
         try {
-            backend = GoBackend(context.applicationContext)
+            appContext = applicationContext
+            backend = GoBackend(applicationContext)
+            GoBackend.setAlwaysOnCallback { recoverForSystemStart() }
         } catch (error: Exception) {
             initializationError = error.message ?: "Не удалось загрузить WireGuard backend."
         } catch (error: LinkageError) {
@@ -40,9 +49,45 @@ object WireGuardController : Tunnel {
         }
     }
 
+    /**
+     * Android may create GoBackend.VpnService without launching an Activity.
+     * The Application initializes this callback before the service is created.
+     * Decryption, parsing and backend setup run off the service main thread.
+     */
+    private fun recoverForSystemStart() {
+        val context = appContext ?: return
+        recoveryExecutor.execute {
+            try {
+                val bytes = EncryptedProfileStore(context).load()
+                    ?: throw IllegalStateException("Сохранённый профиль не найден. Импортируйте его в приложении.")
+                val restoredConfig = WireGuardProfilePolicy.parseAndValidate(bytes)
+                synchronized(this) {
+                    val activeBackend = checkNotNull(backend) {
+                        "WireGuard backend не инициализирован."
+                    }
+                    profile = restoredConfig
+                    val result = activeBackend.setState(this, Tunnel.State.UP, restoredConfig)
+                    state = result
+                    recoveryError = if (result == Tunnel.State.UP) null else
+                        "Android запустил Always-on VPN, но туннель не перешёл в состояние UP."
+                    stateListener?.invoke(result)
+                }
+            } catch (error: Exception) {
+                recoveryError = "Не удалось восстановить VPN при системном запуске. Откройте приложение и проверьте сохранённый профиль."
+                state = Tunnel.State.DOWN
+                stateListener?.invoke(Tunnel.State.DOWN)
+            } catch (error: LinkageError) {
+                recoveryError = "Не удалось загрузить нативное ядро WireGuard при системном запуске."
+                state = Tunnel.State.DOWN
+                stateListener?.invoke(Tunnel.State.DOWN)
+            }
+        }
+    }
+
     @Synchronized
     fun setProfile(config: Config) {
         profile = config
+        recoveryError = null
     }
 
     @Synchronized
@@ -52,6 +97,7 @@ object WireGuardController : Tunnel {
         }
         clearStoredProfile()
         profile = null
+        recoveryError = null
     }
 
     fun currentState(): Tunnel.State {
@@ -77,6 +123,7 @@ object WireGuardController : Tunnel {
             if (target == Tunnel.State.UP) config else null
         )
         state = result
+        if (result == Tunnel.State.UP) recoveryError = null
         stateListener?.invoke(result)
         return result
     }
