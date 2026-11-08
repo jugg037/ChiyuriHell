@@ -65,6 +65,16 @@ class MainActivity : Activity() {
     }
 
     private fun renderState(state: Tunnel.State) {
+        val backendError = WireGuardController.initializationError
+        if (backendError != null) {
+            statusView.text = "VPN-ЯДРО НЕДОСТУПНО"
+            profileView.text = backendError
+            connectButton.text = "ПОДКЛЮЧЕНИЕ НЕДОСТУПНО"
+            connectButton.isEnabled = false
+            importButton.isEnabled = false
+            return
+        }
+
         when (state) {
             Tunnel.State.UP -> {
                 statusView.text = "VPN-ТУННЕЛЬ АКТИВЕН"
@@ -165,6 +175,10 @@ class MainActivity : Activity() {
     }
 
     private fun toggleTunnel() {
+        if (WireGuardController.initializationError != null) {
+            renderState(WireGuardController.currentState())
+            return
+        }
         if (WireGuardController.profile == null) {
             statusView.text = "СНАЧАЛА ИМПОРТИРУЙТЕ ПРОФИЛЬ"
             return
@@ -193,6 +207,13 @@ class MainActivity : Activity() {
                     profileView.text = error.message ?: "Ошибка WireGuard backend."
                     connectButton.text = "ПОВТОРИТЬ"
                     connectButton.isEnabled = WireGuardController.profile != null
+                }
+            } catch (error: LinkageError) {
+                runOnUiThread {
+                    statusView.text = "VPN-ЯДРО НЕДОСТУПНО"
+                    profileView.text = "Не удалось запустить нативный компонент WireGuard."
+                    connectButton.isEnabled = false
+                    importButton.isEnabled = false
                 }
             }
         }
