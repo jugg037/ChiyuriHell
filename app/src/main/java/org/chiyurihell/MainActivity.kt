@@ -122,13 +122,12 @@ class MainActivity : Activity() {
     }
 
     private fun removeSavedProfile() {
-        if (WireGuardController.currentState() == Tunnel.State.UP) {
-            statusView.text = "СНАЧАЛА ОТКЛЮЧИТЕ VPN"
+        if (WireGuardController.currentState() != Tunnel.State.DOWN) {
+            statusView.text = "ДОЖДИТЕСЬ ОТКЛЮЧЕНИЯ VPN"
             return
         }
         try {
-            profileStore.clear()
-            WireGuardController.clearProfile()
+            WireGuardController.clearProfile { profileStore.clear() }
             profileView.text = "Профиль удалён из приложения."
             statusView.text = "ПРОФИЛЬ УДАЛЁН"
             connectButton.text = "ПОДКЛЮЧИТЬСЯ"
