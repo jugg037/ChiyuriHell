@@ -21,7 +21,6 @@ import javax.crypto.spec.GCMParameterSpec
  */
 class EncryptedProfileStore(context: Context) {
     private val file = AtomicFile(context.applicationContext.getFileStreamPath(FILE_NAME))
-    private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
     @Synchronized
     @Throws(Exception::class)
@@ -109,20 +108,24 @@ class EncryptedProfileStore(context: Context) {
     @Synchronized
     fun clear() {
         file.delete()
-        if (keyStore.containsAlias(KEY_ALIAS)) {
-            keyStore.deleteEntry(KEY_ALIAS)
+        val store = loadKeyStore()
+        if (store.containsAlias(KEY_ALIAS)) {
+            store.deleteEntry(KEY_ALIAS)
         }
     }
 
     private fun getExistingKey(): SecretKey {
-        val key = keyStore.getKey(KEY_ALIAS, null) as? SecretKey
+        val key = loadKeyStore().getKey(KEY_ALIAS, null) as? SecretKey
         return key ?: throw GeneralSecurityException(
             "Ключ сохранённого профиля отсутствует. Импортируйте профиль заново."
         )
     }
 
+    private fun loadKeyStore(): KeyStore =
+        KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+
     private fun getOrCreateKey(): SecretKey {
-        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        (loadKeyStore().getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         generator.init(
             KeyGenParameterSpec.Builder(
