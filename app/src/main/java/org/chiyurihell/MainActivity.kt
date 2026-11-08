@@ -93,6 +93,12 @@ class MainActivity : Activity() {
             return
         }
 
+        val recoveryError = WireGuardController.recoveryError
+        if (state == Tunnel.State.DOWN && recoveryError != null) {
+            statusView.text = "НЕ УДАЛОСЬ ВОССТАНОВИТЬ ALWAYS-ON VPN"
+            profileView.text = recoveryError
+        }
+
         when (state) {
             Tunnel.State.UP -> {
                 statusView.text = "VPN-ТУННЕЛЬ АКТИВЕН"
@@ -102,12 +108,14 @@ class MainActivity : Activity() {
                 removeProfileButton.isEnabled = false
             }
             Tunnel.State.DOWN -> {
-                statusView.text = if (WireGuardController.profile == null) {
-                    "ИМПОРТИРУЙТЕ ПРОФИЛЬ"
-                } else {
-                    "ОТКЛЮЧЕНО"
+                if (recoveryError == null) {
+                    statusView.text = if (WireGuardController.profile == null) {
+                        "ИМПОРТИРУЙТЕ ПРОФИЛЬ"
+                    } else {
+                        "ОТКЛЮЧЕНО"
+                    }
                 }
-                connectButton.text = "ПОДКЛЮЧИТЬСЯ"
+                connectButton.text = if (recoveryError != null) "ПОВТОРИТЬ ПОДКЛЮЧЕНИЕ" else "ПОДКЛЮЧИТЬСЯ"
                 connectButton.isEnabled = WireGuardController.profile != null
                 importButton.isEnabled = true
                 removeProfileButton.isEnabled = WireGuardController.profile != null
