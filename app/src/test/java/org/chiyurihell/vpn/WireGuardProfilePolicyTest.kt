@@ -18,6 +18,9 @@ class WireGuardProfilePolicyTest {
         PersistentKeepalive = 25
     """.trimIndent().toByteArray(Charsets.UTF_8)
 
+    private fun changedProfile(transform: (String) -> String): ByteArray =
+        transform(validProfile.toString(Charsets.UTF_8)).toByteArray(Charsets.UTF_8)
+
     @Test
     fun acceptsDualStackFullTunnelProfile() {
         val parsed = WireGuardProfilePolicy.parseAndValidate(validProfile)
@@ -25,10 +28,24 @@ class WireGuardProfilePolicyTest {
     }
 
     @Test
+    fun rejectsProfileMissingIpv4DefaultRoute() {
+        val invalid = changedProfile { it.replace("0.0.0.0/0, ", "") }
+        assertThrows(IllegalArgumentException::class.java) {
+            WireGuardProfilePolicy.parseAndValidate(invalid)
+        }
+    }
+
+    @Test
     fun rejectsProfileMissingIpv6DefaultRoute() {
-        val invalid = validProfile.toString(Charsets.UTF_8)
-            .replace(", ::/0", "")
-            .toByteArray(Charsets.UTF_8)
+        val invalid = changedProfile { it.replace(", ::/0", "") }
+        assertThrows(IllegalArgumentException::class.java) {
+            WireGuardProfilePolicy.parseAndValidate(invalid)
+        }
+    }
+
+    @Test
+    fun rejectsProfileWithoutIpv6InterfaceAddress() {
+        val invalid = changedProfile { it.replace(", fd00::2/128", "") }
         assertThrows(IllegalArgumentException::class.java) {
             WireGuardProfilePolicy.parseAndValidate(invalid)
         }
@@ -36,11 +53,49 @@ class WireGuardProfilePolicyTest {
 
     @Test
     fun rejectsProfileWithoutDns() {
-        val invalid = validProfile.toString(Charsets.UTF_8)
-            .replace("DNS = 1.1.1.1, 2606:4700:4700::1111\n", "")
-            .toByteArray(Charsets.UTF_8)
+        val invalid = changedProfile {
+            it.replace("DNS = 1.1.1.1, 2606:4700:4700::1111\n", "")
+        }
         assertThrows(IllegalArgumentException::class.java) {
             WireGuardProfilePolicy.parseAndValidate(invalid)
+        }
+    }
+
+    @Test
+    fun rejectsProfileWithoutEndpoint() {
+        val invalid = changedProfile { it.replace("Endpoint = 192.0.2.1:51820\n", "") }
+        assertThrows(IllegalArgumentException::class.java) {
+            WireGuardProfilePolicy.parseAndValidate(invalid)
+        }
+    }
+
+    @Test
+    fun rejectsApplicationScopedProfile() {
+        val invalid = changedProfile {
+            it.replace(
+                "DNS = 1.1.1.1, 2606:4700:4700::1111",
+                "DNS = 1.1.1.1, 2606:4700:4700::1111\nIncludedApplications = com.example.app"
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            WireGuardProfilePolicy.parseAndValidate(invalid)
+        }
+    }
+
+    @Test
+    fun rejectsMultiplePeersInInitialAllMode() {
+        val invalid = changedProfile {
+            it + "\n[Peer]\nPublicKey = AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=\nAllowedIPs = 10.0.0.0/8\n"
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            WireGuardProfilePolicy.parseAndValidate(invalid)
+        }
+    }
+
+    @Test
+    fun rejectsOversizedProfile() {
+        assertThrows(IllegalArgumentException::class.java) {
+            WireGuardProfilePolicy.parseAndValidate(ByteArray(256 * 1024 + 1))
         }
     }
 
