@@ -8,7 +8,7 @@ import com.wireguard.config.Config
 /**
  * Process-wide owner for the WireGuard backend.
  * Keeping the Tunnel identity stable avoids losing backend state on Activity recreation.
- * Imported profiles remain memory-only and are discarded when the process exits.
+ * Profile persistence is handled separately by EncryptedProfileStore.
  */
 object WireGuardController : Tunnel {
     private var backend: GoBackend? = null
@@ -46,10 +46,11 @@ object WireGuardController : Tunnel {
     }
 
     @Synchronized
-    fun clearProfile() {
-        check(currentState() != Tunnel.State.UP) {
-            "Сначала отключите VPN, чтобы удалить профиль."
+    fun clearProfile(clearStoredProfile: () -> Unit) {
+        check(currentState() == Tunnel.State.DOWN) {
+            "Дождитесь полного отключения VPN, чтобы удалить профиль."
         }
+        clearStoredProfile()
         profile = null
     }
 
