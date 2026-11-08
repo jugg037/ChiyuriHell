@@ -2,7 +2,7 @@
 
 ## Current security status
 
-ChiyuriHell is an early development project, not a production-certified VPN. The current build can import and start a structurally validated WireGuard profile, but it has not yet passed physical-device leak tests or an independent security audit.
+ChiyuriHell is an early development project, not a production-certified VPN. The current build can import and start a structurally validated WireGuard profile. Imported profiles are encrypted at rest with AES-256-GCM using a key held by Android Keystore, and are revalidated when restored. The app does not automatically reconnect after process restart. This has not yet passed physical-device leak tests or an independent security audit.
 
 ## Important ALL-mode limitation
 
@@ -17,6 +17,7 @@ Until a dedicated security contact is published, do not include private keys, li
 - No arbitrary public proxy is trusted by default.
 - No browsing-history collection is planned.
 - Server profiles must be authenticated and revocable.
+- Imported WireGuard private keys must never be stored in plaintext; encrypted profile storage must use Android Keystore-backed keys.
 - Tunnel status must be verified rather than assumed.
 - IPv4, IPv6, DNS, reconnect, and fail-closed behavior must be tested before a public VPN release.
 - Third-party dependencies and licenses must be reviewed before integration.
