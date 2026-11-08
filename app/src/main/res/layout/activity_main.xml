@@ -95,7 +95,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
-            android:text="Профиль пока хранится только в памяти приложения. Не импортируйте конфигурации от неизвестных операторов: они могут видеть метаданные вашего трафика."
+            android:text="Профиль хранится только в памяти. Системная блокировка трафика при обрыве VPN пока не реализована: после разрыва Android может использовать обычную сеть. Не используйте неизвестные серверы для чувствительных данных."
             android:textColor="@color/hell_muted"
             android:textSize="12sp" />
         <TextView
