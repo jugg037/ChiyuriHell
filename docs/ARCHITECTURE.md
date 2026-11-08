@@ -1,33 +1,41 @@
-# ChiyuriHell architecture (initial)
+# ChiyuriHell architecture
 
 ## Product decisions
 
 - Platform: Android 10+ (API 29+).
-- Routing intent: ALL device traffic through one VPN tunnel.
-- Server policy: MIXED, combining project-operated nodes and vetted community/provider nodes.
-- The client must fail closed: it must never claim protection when the tunnel is absent or routing is incomplete.
+- Routing: ALL — full-device VPN tunnel.
+- Server policy: MIXED — project-operated nodes plus vetted community/provider nodes.
+- Failure policy: fail closed; never claim protection if tunnel establishment fails.
 
-## Planned components
+## Implemented: WireGuard first transport
 
-1. Android UI and connection state machine.
-2. Android VpnService lifecycle adapter.
-3. Reviewed tunnel backend adapter (selection pending security and license review).
-4. Signed server-profile catalog and profile verifier.
-5. Routing policy: IPv4, IPv6, DNS, and private/local network behavior.
-6. Diagnostics that do not upload browsing history.
-7. Security and build verification.
+The Android app integrates com.wireguard.android:tunnel:1.0.20260102 and its GoBackend. The library's own GoBackend.VpnService owns the TUN interface and userspace WireGuard engine. Do not add a second competing VPN service for this backend.
 
-## Connection state machine
+The process-wide WireGuardController keeps one backend and one stable Tunnel identity across Activity recreation. Imported profiles are held in memory only; no private key is written to ordinary preferences or logs.
 
-DISCONNECTED -> PREPARING -> CONNECTING -> CONNECTED
+## ALL-mode profile policy
 
-Any failure transitions to ERROR or DISCONNECTED. CONNECTED is permitted only after the backend confirms tunnel establishment and route/DNS checks pass. Reconnects must re-verify the profile and tunnel. User-visible state must never be inferred from a button press.
+The initial importer accepts only structurally valid WireGuard profiles that have:
+- both IPv4 and IPv6 interface addresses;
+- at least one DNS server;
+- exactly one peer;
+- both 0.0.0.0/0 and ::/0 in AllowedIPs;
+- no included-application or excluded-application filters;
+- a peer endpoint.
+
+Profiles missing any requirement are rejected before the connect control is enabled. This is a conservative first policy, not a substitute for packet-level leak tests or a trust assessment of the server operator.
+
+## Connection lifecycle
+
+DISCONNECTED -> VPN_PERMISSION -> CONNECTING -> CONNECTED
+
+Failure returns to DISCONNECTED/ERROR. The UI only reports connected after the WireGuard backend reports Tunnel.State.UP. A permission denial must not leave the connect control disabled.
 
 ## Server profile requirements
 
-A profile is eligible only when it has:
-- a stable identifier and version;
-- a named operator and contact or project page;
+A catalog entry is eligible only when it has:
+- stable identifier and version;
+- named operator and contact/project page;
 - explicit authorization for public use;
 - documented jurisdiction and retention policy;
 - authenticated transport configuration;
@@ -35,20 +43,21 @@ A profile is eligible only when it has:
 
 A reachability test is not a trust assessment. Unknown public proxies are excluded from automatic selection.
 
-## Full-tunnel requirements
+## Remaining full-tunnel requirements
 
-Before enabling ALL mode, tests must cover:
-- IPv4 default route;
-- IPv6 default route or explicit IPv6 blocking;
-- DNS routing and leak checks;
+Physical-device tests must cover:
+- IPv4 and IPv6 default routes;
+- DNS routing and leak behavior;
 - network changes and captive portals;
 - tunnel process crash and reconnect;
-- boot/restart behavior if enabled;
+- VPN permission revocation;
+- app process death and restart;
 - Android battery/background restrictions;
-- fail-closed behavior during every transition.
+- behavior when the server stops responding.
 
 ## Open decisions
 
-- Select tunnel backend only after reviewing maintenance, Android integration, license, and threat model.
-- Decide whether the server catalog is signed by a project key and how key rotation/revocation works.
-- Decide how user-supplied profiles are isolated from curated community profiles.
+- Secure, user-controlled profile persistence and key handling.
+- Signed server catalog format, signing key rotation, and revocation.
+- Additional transports only after maintenance, security, and license review.
+- Privacy-preserving diagnostics and opt-in telemetry policy.
