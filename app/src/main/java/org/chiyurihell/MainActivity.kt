@@ -25,6 +25,7 @@ class MainActivity : Activity() {
     private lateinit var profileView: TextView
     private lateinit var importButton: Button
     private lateinit var connectButton: Button
+    private lateinit var removeProfileButton: Button
     private lateinit var profileStore: EncryptedProfileStore
 
     private val stateListener: (Tunnel.State) -> Unit = { state ->
@@ -41,9 +42,11 @@ class MainActivity : Activity() {
         profileView = findViewById(R.id.profileStatus)
         importButton = findViewById(R.id.importButton)
         connectButton = findViewById(R.id.connectButton)
+        removeProfileButton = findViewById(R.id.removeProfileButton)
 
         importButton.setOnClickListener { chooseProfile() }
         connectButton.setOnClickListener { toggleTunnel() }
+        removeProfileButton.setOnClickListener { removeSavedProfile() }
         WireGuardController.stateListener = stateListener
 
         try {
@@ -86,6 +89,7 @@ class MainActivity : Activity() {
             connectButton.text = "ПОДКЛЮЧЕНИЕ НЕДОСТУПНО"
             connectButton.isEnabled = false
             importButton.isEnabled = false
+            removeProfileButton.isEnabled = false
             return
         }
 
@@ -95,6 +99,7 @@ class MainActivity : Activity() {
                 connectButton.text = "ОТКЛЮЧИТЬСЯ"
                 connectButton.isEnabled = true
                 importButton.isEnabled = false
+                removeProfileButton.isEnabled = false
             }
             Tunnel.State.DOWN -> {
                 statusView.text = if (WireGuardController.profile == null) {
@@ -105,12 +110,34 @@ class MainActivity : Activity() {
                 connectButton.text = "ПОДКЛЮЧИТЬСЯ"
                 connectButton.isEnabled = WireGuardController.profile != null
                 importButton.isEnabled = true
+                removeProfileButton.isEnabled = WireGuardController.profile != null
             }
             Tunnel.State.TOGGLE -> {
                 statusView.text = "ИЗМЕНЕНИЕ СОЕДИНЕНИЯ…"
                 connectButton.isEnabled = false
                 importButton.isEnabled = false
+                removeProfileButton.isEnabled = false
             }
+        }
+    }
+
+    private fun removeSavedProfile() {
+        if (WireGuardController.currentState() == Tunnel.State.UP) {
+            statusView.text = "СНАЧАЛА ОТКЛЮЧИТЕ VPN"
+            return
+        }
+        try {
+            profileStore.clear()
+            WireGuardController.clearProfile()
+            profileView.text = "Профиль удалён из приложения."
+            statusView.text = "ПРОФИЛЬ УДАЛЁН"
+            connectButton.text = "ПОДКЛЮЧИТЬСЯ"
+            connectButton.isEnabled = false
+            removeProfileButton.isEnabled = false
+            importButton.isEnabled = true
+        } catch (error: Exception) {
+            statusView.text = "НЕ УДАЛОСЬ УДАЛИТЬ ПРОФИЛЬ"
+            profileView.text = error.message ?: "Не удалось очистить сохранённую конфигурацию."
         }
     }
 
@@ -177,12 +204,14 @@ class MainActivity : Activity() {
                     importButton.isEnabled = true
                     connectButton.text = "ПОДКЛЮЧИТЬСЯ"
                     connectButton.isEnabled = true
+                    removeProfileButton.isEnabled = true
                 }
             } catch (error: Exception) {
                 runOnUiThread {
                     statusView.text = "ПРОФИЛЬ НЕ ПРИНЯТ"
                     profileView.text = error.message ?: "Не удалось проверить профиль."
                     connectButton.isEnabled = WireGuardController.profile != null
+                    removeProfileButton.isEnabled = WireGuardController.profile != null
                     importButton.isEnabled = true
                 }
             }
