@@ -67,7 +67,7 @@ class MainActivity : Activity() {
     private fun renderState(state: Tunnel.State) {
         when (state) {
             Tunnel.State.UP -> {
-                statusView.text = "ЗАЩИЩЁННОЕ СОЕДИНЕНИЕ АКТИВНО"
+                statusView.text = "VPN-ТУННЕЛЬ АКТИВЕН"
                 connectButton.text = "ОТКЛЮЧИТЬСЯ"
                 connectButton.isEnabled = true
                 importButton.isEnabled = false
