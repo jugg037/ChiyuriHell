@@ -24,10 +24,19 @@ object WireGuardController : Tunnel {
     @Volatile
     var stateListener: ((Tunnel.State) -> Unit)? = null
 
+    @Volatile
+    var initializationError: String? = null
+        private set
+
     @Synchronized
     fun initialize(context: Context) {
-        if (backend == null) {
+        if (backend != null || initializationError != null) return
+        try {
             backend = GoBackend(context.applicationContext)
+        } catch (error: Exception) {
+            initializationError = error.message ?: "Не удалось загрузить WireGuard backend."
+        } catch (error: LinkageError) {
+            initializationError = "Не удалось загрузить нативное ядро WireGuard."
         }
     }
 
@@ -44,7 +53,9 @@ object WireGuardController : Tunnel {
     @Synchronized
     @Throws(Exception::class)
     fun toggle(): Tunnel.State {
-        val activeBackend = checkNotNull(backend) { "VPN backend ещё не инициализирован." }
+        val activeBackend = checkNotNull(backend) {
+            initializationError ?: "VPN backend ещё не инициализирован."
+        }
         val config = checkNotNull(profile) { "Сначала импортируйте профиль." }
         val target = if (activeBackend.getState(this) == Tunnel.State.UP) {
             Tunnel.State.DOWN
