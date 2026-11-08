@@ -11,7 +11,7 @@ ChiyuriHell is an open-source Android project for privacy-respecting access to l
 
 The Android app now integrates the official WireGuard tunnel library. Users can import a WireGuard configuration file, and the app validates that it contains IPv4 and IPv6 interface addresses, DNS servers, one peer, and both default routes (0.0.0.0/0 and ::/0) before enabling connection. The backend is managed through the official WireGuard Android GoBackend.
 
-Imported profiles are currently held in application memory only and are discarded when the process exits. This avoids writing private keys to ordinary preferences or files while secure, user-controlled persistence is designed.
+Imported profiles are now stored as AES-256-GCM ciphertext in the app's private storage. The encryption key is generated and held by Android Keystore; plaintext configuration and private keys are not written to ordinary files or preferences. The app restores and revalidates the profile after process restart, but does not automatically reconnect.
 
 This is an early integration build, **not yet a production-certified VPN**. The current app routes IPv4 and IPv6 through WireGuard while the tunnel is active, but it does not yet provide a system-wide kill switch if the tunnel or process stops. A profile passing structural validation does not prove that its operator is trustworthy, that the server is reachable, or that traffic is leak-free. Do not use unknown public profiles for sensitive traffic.
 
@@ -34,6 +34,7 @@ This is an early integration build, **not yet a production-certified VPN**. The 
 - Configuration import through Android document picker.
 - Profile size limit and structural validation for dual-stack ALL mode.
 - Process-wide tunnel controller to retain backend identity across Activity recreation.
+- Encrypted profile persistence using AES-256-GCM and Android Keystore, with atomic file replacement and profile revalidation on launch.
 - VPN permission flow and connect/disconnect control.
 - GitHub Actions unit-test and debug APK build with SHA-256 checksum artifact.
 
