@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build debug APK
+  verify:
+    name: Verify and build Android APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,11 +26,20 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Run unit tests
+        run: gradle --no-daemon testDebugUnitTest
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
-      - name: Upload debug APK
+      - name: Calculate APK SHA-256
+        shell: bash
+        run: |
+          cd app/build/outputs/apk/debug
+          sha256sum *.apk > SHA256SUMS.txt
+      - name: Upload debug APK and checksum
         uses: actions/upload-artifact@v4
         with:
           name: ChiyuriHell-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/SHA256SUMS.txt
           if-no-files-found: error
