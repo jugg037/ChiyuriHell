@@ -72,6 +72,16 @@
                 android:text="ПОДКЛЮЧИТЬСЯ"
                 android:textColor="@color/hell_text"
                 android:textStyle="bold" />
+            <Button
+                android:id="@+id/removeProfileButton"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="@color/hell_panel"
+                android:enabled="false"
+                android:text="УДАЛИТЬ СОХРАНЁННЫЙ ПРОФИЛЬ"
+                android:textColor="@color/hell_bright_red"
+                android:textStyle="bold" />
         </LinearLayout>
         <TextView
             android:layout_width="match_parent"
