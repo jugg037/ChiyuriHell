@@ -40,14 +40,13 @@ class EncryptedProfileStore(context: Context) {
         var output: java.io.FileOutputStream? = null
         try {
             output = file.startWrite()
-            DataOutputStream(output).use { stream ->
-                stream.write(MAGIC)
-                stream.writeByte(iv.size)
-                stream.write(iv)
-                stream.writeInt(encrypted.size)
-                stream.write(encrypted)
-                stream.flush()
-            }
+            val stream = DataOutputStream(output)
+            stream.write(MAGIC)
+            stream.writeByte(iv.size)
+            stream.write(iv)
+            stream.writeInt(encrypted.size)
+            stream.write(encrypted)
+            stream.flush()
             file.finishWrite(output)
         } catch (error: Exception) {
             if (output != null) file.failWrite(output)
