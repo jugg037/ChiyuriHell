@@ -178,6 +178,7 @@ class MainActivity : Activity() {
         connectButton.isEnabled = false
 
         executor.execute {
+            var profileValidated = false
             try {
                 val bytes = contentResolver.openInputStream(uri)?.use { input ->
                     val output = ByteArrayOutputStream()
@@ -194,6 +195,7 @@ class MainActivity : Activity() {
                 } ?: throw IllegalArgumentException("Не удалось открыть файл профиля.")
 
                 val parsed = WireGuardProfilePolicy.parseAndValidate(bytes)
+                profileValidated = true
                 profileStore.save(bytes)
                 WireGuardController.setProfile(parsed)
 
@@ -207,8 +209,12 @@ class MainActivity : Activity() {
                 }
             } catch (error: Exception) {
                 runOnUiThread {
-                    statusView.text = "ПРОФИЛЬ НЕ ПРИНЯТ"
-                    profileView.text = error.message ?: "Не удалось проверить профиль."
+                    statusView.text = if (profileValidated) {
+                        "НЕ УДАЛОСЬ СОХРАНИТЬ ПРОФИЛЬ"
+                    } else {
+                        "ПРОФИЛЬ НЕ ПРИНЯТ"
+                    }
+                    profileView.text = error.message ?: "Не удалось проверить или сохранить профиль."
                     connectButton.isEnabled = WireGuardController.profile != null
                     removeProfileButton.isEnabled = WireGuardController.profile != null
                     importButton.isEnabled = true
