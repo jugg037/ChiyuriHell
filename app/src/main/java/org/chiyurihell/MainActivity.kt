@@ -6,14 +6,12 @@ import android.net.VpnService
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import com.wireguard.android.backend.GoBackend
-import com.wireguard.android.backend.Tunnel
-import com.wireguard.config.Config
+import org.chiyurihell.vpn.WireGuardController
 import org.chiyurihell.vpn.WireGuardProfilePolicy
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
 
-class MainActivity : Activity(), Tunnel {
+class MainActivity : Activity() {
     companion object {
         private const val REQUEST_PROFILE = 4101
         private const val REQUEST_VPN_PERMISSION = 4102
@@ -21,46 +19,21 @@ class MainActivity : Activity(), Tunnel {
     }
 
     private val executor = Executors.newSingleThreadExecutor()
-    private val backend by lazy { GoBackend(applicationContext) }
-
-    @Volatile
-    private var importedConfig: Config? = null
 
     private lateinit var statusView: TextView
     private lateinit var profileView: TextView
     private lateinit var importButton: Button
     private lateinit var connectButton: Button
 
-    override fun getName(): String = "ChiyuriHell"
-
-    override fun onStateChange(newState: Tunnel.State) {
-        runOnUiThread {
-            when (newState) {
-                Tunnel.State.UP -> {
-                    statusView.text = "ЗАЩИЩЁННОЕ СОЕДИНЕНИЕ АКТИВНО"
-                    connectButton.text = "ОТКЛЮЧИТЬСЯ"
-                    connectButton.isEnabled = true
-                }
-                Tunnel.State.DOWN -> {
-                    statusView.text = if (importedConfig == null) {
-                        "ИМПОРТИРУЙТЕ ПРОФИЛЬ"
-                    } else {
-                        "ОТКЛЮЧЕНО"
-                    }
-                    connectButton.text = "ПОДКЛЮЧИТЬСЯ"
-                    connectButton.isEnabled = importedConfig != null
-                }
-                Tunnel.State.TOGGLE -> {
-                    statusView.text = "ИЗМЕНЕНИЕ СОЕДИНЕНИЯ…"
-                    connectButton.isEnabled = false
-                }
-            }
-        }
+    private val stateListener: (com.wireguard.android.backend.Tunnel.State) -> Unit = { state ->
+        runOnUiThread { renderState(state) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        WireGuardController.initialize(applicationContext)
 
         statusView = findViewById(R.id.connectionStatus)
         profileView = findViewById(R.id.profileStatus)
@@ -69,7 +42,50 @@ class MainActivity : Activity(), Tunnel {
 
         importButton.setOnClickListener { chooseProfile() }
         connectButton.setOnClickListener { toggleTunnel() }
-        connectButton.isEnabled = false
+
+        WireGuardController.stateListener = stateListener
+        renderState(WireGuardController.currentState())
+        if (WireGuardController.profile != null) {
+            profileView.text = "WireGuard • IPv4 + IPv6 • DNS • ALL"
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::connectButton.isInitialized) {
+            WireGuardController.stateListener = stateListener
+            renderState(WireGuardController.currentState())
+        }
+    }
+
+    override fun onDestroy() {
+        if (WireGuardController.stateListener === stateListener) {
+            WireGuardController.stateListener = null
+        }
+        super.onDestroy()
+    }
+
+    private fun renderState(state: com.wireguard.android.backend.Tunnel.State) {
+        when (state) {
+            com.wireguard.android.backend.Tunnel.State.UP -> {
+                statusView.text = "ЗАЩИЩЁННОЕ СОЕДИНЕНИЕ АКТИВНО"
+                connectButton.text = "ОТКЛЮЧИТЬСЯ"
+                connectButton.isEnabled = true
+            }
+            com.wireguard.android.backend.Tunnel.State.DOWN -> {
+                statusView.text = if (WireGuardController.profile == null) {
+                    "ИМПОРТИРУЙТЕ ПРОФИЛЬ"
+                } else {
+                    "ОТКЛЮЧЕНО"
+                }
+                connectButton.text = "ПОДКЛЮЧИТЬСЯ"
+                connectButton.isEnabled = WireGuardController.profile != null
+            }
+            com.wireguard.android.backend.Tunnel.State.TOGGLE -> {
+                statusView.text = "ИЗМЕНЕНИЕ СОЕДИНЕНИЯ…"
+                connectButton.isEnabled = false
+            }
+        }
     }
 
     private fun chooseProfile() {
@@ -81,14 +97,22 @@ class MainActivity : Activity(), Tunnel {
         startActivityForResult(intent, REQUEST_PROFILE)
     }
 
-    @Deprecated("Using the activity result callback keeps compatibility with Android 10.")
+    @Deprecated("Using activity result callback preserves Android 10 compatibility.")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode != RESULT_OK || data?.data == null) return
 
-        when (requestCode) {
-            REQUEST_PROFILE -> importProfile(data.data!!)
-            REQUEST_VPN_PERMISSION -> connectTunnel()
+        if (requestCode == REQUEST_VPN_PERMISSION) {
+            if (resultCode == RESULT_OK) {
+                connectTunnel()
+            } else {
+                statusView.text = "РАЗРЕШЕНИЕ VPN НЕ ПРЕДОСТАВЛЕНО"
+                connectButton.isEnabled = WireGuardController.profile != null
+            }
+            return
+        }
+
+        if (requestCode == REQUEST_PROFILE && resultCode == RESULT_OK && data?.data != null) {
+            importProfile(data.data!!)
         }
     }
 
@@ -114,19 +138,20 @@ class MainActivity : Activity(), Tunnel {
                 } ?: throw IllegalArgumentException("Не удалось открыть файл профиля.")
 
                 val parsed = WireGuardProfilePolicy.parseAndValidate(bytes)
+                WireGuardController.setProfile(parsed)
+
                 runOnUiThread {
-                    importedConfig = parsed
-                    statusView.text = "ПРОФИЛЬ ПРОВЕРЕН"
                     profileView.text = "WireGuard • IPv4 + IPv6 • DNS • ALL"
+                    statusView.text = "ПРОФИЛЬ ПРОВЕРЕН"
+                    importButton.isEnabled = true
                     connectButton.text = "ПОДКЛЮЧИТЬСЯ"
                     connectButton.isEnabled = true
-                    importButton.isEnabled = true
                 }
             } catch (error: Exception) {
                 runOnUiThread {
                     statusView.text = "ПРОФИЛЬ НЕ ПРИНЯТ"
                     profileView.text = error.message ?: "Не удалось проверить профиль."
-                    connectButton.isEnabled = false
+                    connectButton.isEnabled = WireGuardController.profile != null
                     importButton.isEnabled = true
                 }
             }
@@ -134,8 +159,7 @@ class MainActivity : Activity(), Tunnel {
     }
 
     private fun toggleTunnel() {
-        val config = importedConfig
-        if (config == null) {
+        if (WireGuardController.profile == null) {
             statusView.text = "СНАЧАЛА ИМПОРТИРУЙТЕ ПРОФИЛЬ"
             return
         }
@@ -147,37 +171,23 @@ class MainActivity : Activity(), Tunnel {
         if (permissionIntent != null) {
             startActivityForResult(permissionIntent, REQUEST_VPN_PERMISSION)
         } else {
-            setTunnelState(config)
+            connectTunnel()
         }
     }
 
     private fun connectTunnel() {
-        val config = importedConfig ?: return
-        setTunnelState(config)
-    }
-
-    private fun setTunnelState(config: Config) {
+        connectButton.isEnabled = false
+        statusView.text = "ПОДКЛЮЧЕНИЕ…"
         executor.execute {
             try {
-                val current = backend.getState(this)
-                val target = if (current == Tunnel.State.UP) Tunnel.State.DOWN else Tunnel.State.UP
-                val result = backend.setState(this, target, if (target == Tunnel.State.UP) config else null)
-                runOnUiThread {
-                    if (result == Tunnel.State.UP) {
-                        statusView.text = "ЗАЩИЩЁННОЕ СОЕДИНЕНИЕ АКТИВНО"
-                        connectButton.text = "ОТКЛЮЧИТЬСЯ"
-                    } else {
-                        statusView.text = "ОТКЛЮЧЕНО"
-                        connectButton.text = "ПОДКЛЮЧИТЬСЯ"
-                    }
-                    connectButton.isEnabled = true
-                }
+                val state = WireGuardController.toggle()
+                runOnUiThread { renderState(state) }
             } catch (error: Exception) {
                 runOnUiThread {
                     statusView.text = "НЕ УДАЛОСЬ ПОДКЛЮЧИТЬСЯ"
-                    profileView.text = error.message ?: "Ошибка VPN backend."
+                    profileView.text = error.message ?: "Ошибка WireGuard backend."
                     connectButton.text = "ПОВТОРИТЬ"
-                    connectButton.isEnabled = true
+                    connectButton.isEnabled = WireGuardController.profile != null
                 }
             }
         }
