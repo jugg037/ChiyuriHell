@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import com.wireguard.android.backend.Tunnel
+import org.chiyurihell.vpn.EncryptedProfileStore
 import org.chiyurihell.vpn.WireGuardController
 import org.chiyurihell.vpn.WireGuardProfilePolicy
 import java.io.ByteArrayOutputStream
@@ -24,6 +25,7 @@ class MainActivity : Activity() {
     private lateinit var profileView: TextView
     private lateinit var importButton: Button
     private lateinit var connectButton: Button
+    private lateinit var profileStore: EncryptedProfileStore
 
     private val stateListener: (Tunnel.State) -> Unit = { state ->
         runOnUiThread { renderState(state) }
@@ -33,6 +35,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         WireGuardController.initialize(applicationContext)
+        profileStore = EncryptedProfileStore(applicationContext)
 
         statusView = findViewById(R.id.connectionStatus)
         profileView = findViewById(R.id.profileStatus)
@@ -43,9 +46,20 @@ class MainActivity : Activity() {
         connectButton.setOnClickListener { toggleTunnel() }
         WireGuardController.stateListener = stateListener
 
+        try {
+            val savedProfile = profileStore.load()
+            if (savedProfile != null) {
+                WireGuardController.setProfile(WireGuardProfilePolicy.parseAndValidate(savedProfile))
+                profileView.text = "Сохранённый профиль • WireGuard • IPv4 + IPv6 • DNS • ALL"
+            }
+        } catch (error: Exception) {
+            statusView.text = "НЕ УДАЛОСЬ ВОССТАНОВИТЬ ПРОФИЛЬ"
+            profileView.text = error.message ?: "Повторно импортируйте конфигурацию WireGuard."
+        }
+
         renderState(WireGuardController.currentState())
         if (WireGuardController.profile != null) {
-            profileView.text = "WireGuard • IPv4 + IPv6 • DNS • ALL"
+            profileView.text = "Сохранённый профиль • WireGuard • IPv4 + IPv6 • DNS • ALL"
         }
     }
 
@@ -154,6 +168,7 @@ class MainActivity : Activity() {
                 } ?: throw IllegalArgumentException("Не удалось открыть файл профиля.")
 
                 val parsed = WireGuardProfilePolicy.parseAndValidate(bytes)
+                profileStore.save(bytes)
                 WireGuardController.setProfile(parsed)
 
                 runOnUiThread {
