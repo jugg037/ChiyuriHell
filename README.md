@@ -13,7 +13,7 @@ The Android app now integrates the official WireGuard tunnel library. Users can 
 
 Imported profiles are currently held in application memory only and are discarded when the process exits. This avoids writing private keys to ordinary preferences or files while secure, user-controlled persistence is designed.
 
-This is an early integration build, **not yet a production-certified VPN**. A profile passing structural validation does not prove that its operator is trustworthy, that the server is reachable, or that traffic is leak-free. Do not use unknown public profiles for sensitive traffic.
+This is an early integration build, **not yet a production-certified VPN**. The current app routes IPv4 and IPv6 through WireGuard while the tunnel is active, but it does not yet provide a system-wide kill switch if the tunnel or process stops. A profile passing structural validation does not prove that its operator is trustworthy, that the server is reachable, or that traffic is leak-free. Do not use unknown public profiles for sensitive traffic.
 
 ## Security principles
 
@@ -22,6 +22,7 @@ This is an early integration build, **not yet a production-certified VPN**. A pr
 - Server operators, jurisdictions, retention policies, and transport security must be documented.
 - Profile parsing and validation must not log private keys or full configuration contents.
 - A connection must not be reported as active unless the backend reports the tunnel as up.
+- Android Always-on VPN support is intentionally disabled until persistent configuration and a verified restart lifecycle are implemented.
 - Full-tunnel profiles must include IPv4 and IPv6 default routes and configured DNS.
 - DNS, IPv6, reconnect, network-change, and fail-closed behavior require device-level tests.
 - Third-party components must be reviewed for maintenance status, security, and license compatibility.
