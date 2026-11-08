@@ -45,6 +45,14 @@ object WireGuardController : Tunnel {
         profile = config
     }
 
+    @Synchronized
+    fun clearProfile() {
+        check(currentState() != Tunnel.State.UP) {
+            "Сначала отключите VPN, чтобы удалить профиль."
+        }
+        profile = null
+    }
+
     fun currentState(): Tunnel.State {
         val activeBackend = backend ?: return Tunnel.State.DOWN
         return activeBackend.getState(this)
