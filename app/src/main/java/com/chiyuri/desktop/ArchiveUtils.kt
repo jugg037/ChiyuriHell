@@ -124,6 +124,7 @@ internal fun extractSevenZArchive(context: Context, archive: DocumentFile, desti
 // Junrar is used for extraction only. Its UnRAR license prohibits using the code to develop a RAR-compatible archiver.
 internal fun extractRarArchive(context: Context, archiveFile: DocumentFile, destination: DocumentFile?, password: String): Int {
     require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
+    if (archiveFile.length() > 512L * 1024L * 1024L) throw IOException("Архив больше 512 МБ")
     var extracted = 0
     var processed = 0
     var totalBytes = 0L
@@ -250,6 +251,7 @@ internal fun listArchiveEntries(context: Context, archive: DocumentFile, format:
             }
         }
         else -> {
+            if (archive.length() > 512L * 1024L * 1024L) throw IOException("Архив больше 512 МБ")
             context.contentResolver.openInputStream(archive.uri).use { input ->
                 requireNotNull(input) { "Не удалось прочитать RAR-архив" }
                 val options = ArchiveOptions.builder().maxDictionarySize(128L * 1024L * 1024L).apply {
