@@ -631,13 +631,13 @@ private fun DesktopScreen() {
                     tint = if (filesOpen && !filesMinimized && activePanel == "files") LocalAccent.current else MainText,
                     modifier = Modifier.size(38.dp).clickable {
                         if (filesOpen && !filesMinimized && activePanel == "files") filesMinimized = true
-                        else { filesOpen = true; filesMinimized = false; if (!isWideLayout) settingsOpen = false; activePanel = "files" }
+                        else { filesOpen = true; filesMinimized = false; if (!isWideLayout) settingsOpen = false; activePanel = "files"; startOpen = false }
                     }.padding(9.dp))
                 Icon(Icons.Filled.Palette, contentDescription = "Оформление",
                     tint = if (settingsOpen && !settingsMinimized && activePanel == "settings") LocalAccent.current else MainText,
                     modifier = Modifier.size(38.dp).clickable {
                         if (settingsOpen && !settingsMinimized && activePanel == "settings") settingsMinimized = true
-                        else { settingsOpen = true; settingsMinimized = false; if (!isWideLayout) filesOpen = false; activePanel = "settings" }
+                        else { settingsOpen = true; settingsMinimized = false; if (!isWideLayout) filesOpen = false; activePanel = "settings"; startOpen = false }
                     }.padding(9.dp))
                 pinnedApps.forEach { app ->
                     Box(
