@@ -53,7 +53,8 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Browse a user-selected shared-storage folder using Android's Storage Access Framework
 - [x] Open supported files with installed Android apps; create folders and delete files
 - [x] Basic file operations: create folders, rename files/folders and confirm recursive deletion using granted SAF permissions
-- [x] Copy/move files and folders recursively using SAF, with entry and size limits
+- [x] Copy/move files and folders recursively using SAF, with 1,000-entry, 64-level and 512 MiB limits
+- [x] Confirmed recursive folder deletion with entry/depth limits
 - [ ] Advanced permission/error recovery
   - [x] Detect expired SAF folder grants and request folder selection again
   - [x] Detect read-only folders and disable write operations
