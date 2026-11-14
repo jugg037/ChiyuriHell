@@ -127,24 +127,51 @@ internal fun isCompleteRarPartSequence(partNumbers: List<Int>): Boolean =
 
 private fun copyRarSetToTemp(context: Context, archiveFile: DocumentFile): Pair<File, File> {
     val name = archiveFile.name ?: throw IOException("У RAR-архива отсутствует имя")
+    val parent = archiveFile.parentFile
+    val siblings = parent?.listFiles()?.filter { it.isFile }?.toMutableList() ?: mutableListOf()
+    if (siblings.none { it.uri == archiveFile.uri }) siblings += archiveFile
+
     val partPattern = Regex("^(.*)\\.part(\\d+)\\.rar$", RegexOption.IGNORE_CASE)
     val selectedPart = partPattern.matchEntire(name)
     val volumes = if (selectedPart != null) {
         val prefix = selectedPart.groupValues[1]
-        val parent = archiveFile.parentFile
-        val found = parent?.listFiles().orEmpty().mapNotNull { item ->
-            if (!item.isFile) return@mapNotNull null
+        val found = siblings.mapNotNull { item ->
             val match = partPattern.matchEntire(item.name ?: "") ?: return@mapNotNull null
             if (!match.groupValues[1].equals(prefix, ignoreCase = true)) return@mapNotNull null
             val number = match.groupValues[2].toIntOrNull() ?: return@mapNotNull null
             number to item
         }.sortedBy { it.first }
         if (!isCompleteRarPartSequence(found.map { it.first })) {
-            throw IOException("Неполный набор томов RAR: нужны части начиная с part1")
+            throw IOException("Неполный набор RAR5: нужны все части начиная с part1")
         }
         found.map { it.second }
     } else {
-        listOf(archiveFile)
+        val oldPattern = Regex("^(.*)\\.([r-z])(\\d{2})$", RegexOption.IGNORE_CASE)
+        val selectedOldPart = oldPattern.matchEntire(name)
+        val baseName = when {
+            selectedOldPart != null -> selectedOldPart.groupValues[1]
+            name.endsWith(".rar", ignoreCase = true) -> name.dropLast(4)
+            else -> return copySingleRarToTemp(context, archiveFile)
+        }
+        val firstVolume = siblings.firstOrNull { it.name.equals("$baseName.rar", ignoreCase = true) }
+            ?: if (selectedOldPart == null) archiveFile.takeIf { name.endsWith(".rar", true) }
+            else null
+            ?: throw IOException("Не найден первый том $baseName.rar")
+        val oldParts = siblings.mapNotNull { item ->
+            val match = oldPattern.matchEntire(item.name ?: "") ?: return@mapNotNull null
+            if (!match.groupValues[1].equals(baseName, ignoreCase = true)) return@mapNotNull null
+            val letter = match.groupValues[2].lowercase(Locale.ROOT)[0]
+            val number = match.groupValues[3].toIntOrNull() ?: return@mapNotNull null
+            ((letter - 'r') * 100 + number) to item
+        }.sortedBy { it.first }
+        if (oldParts.isNotEmpty() || selectedOldPart != null) {
+            if (!isCompleteLegacyRarPartSequence(oldParts.map { it.first })) {
+                throw IOException("Неполный набор RAR: отсутствует один из томов .r00/.s00 и далее")
+            }
+            listOf(firstVolume) + oldParts.map { it.second }
+        } else {
+            listOf(archiveFile)
+        }
     }
 
     if (volumes.size > 1000) throw IOException("В наборе RAR больше 1000 томов")
@@ -178,6 +205,41 @@ private fun copyRarSetToTemp(context: Context, archiveFile: DocumentFile): Pair<
         throw error
     }
 }
+
+private fun copySingleRarToTemp(context: Context, archiveFile: DocumentFile): Pair<File, File> {
+    val tempDir = File(context.cacheDir, "chiyuri-rar-${System.nanoTime()}")
+    if (!tempDir.mkdirs()) throw IOException("Не удалось создать временную папку для RAR")
+    try {
+        val name = archiveFile.name?.substringAfterLast('/')?.substringAfterLast('\\')
+            ?.takeIf { it.isNotBlank() && it != "." && it != ".." }
+            ?: throw IOException("У RAR-архива недопустимое имя")
+        val target = File(tempDir, name)
+        context.contentResolver.openInputStream(archiveFile.uri).use { input ->
+            requireNotNull(input) { "Не удалось прочитать RAR-архив" }
+            target.outputStream().use { output ->
+                val buffer = ByteArray(8192)
+                var total = 0L
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    if (total > 512L * 1024L * 1024L) throw IOException("Архив больше 512 МБ")
+                    output.write(buffer, 0, count)
+                }
+            }
+        }
+        return tempDir to target
+    } catch (error: Exception) {
+        tempDir.deleteRecursively()
+        throw error
+    }
+}
+
+internal fun isCompleteRarPartSequence(partNumbers: List<Int>): Boolean =
+    partNumbers.isNotEmpty() && partNumbers.sorted() == (1..(partNumbers.maxOrNull() ?: 0)).toList()
+
+internal fun isCompleteLegacyRarPartSequence(partNumbers: List<Int>): Boolean =
+    partNumbers.isNotEmpty() && partNumbers.sorted() == (0..(partNumbers.maxOrNull() ?: -1)).toList()
 
 internal fun extractRarArchive(context: Context, archiveFile: DocumentFile, destination: DocumentFile?, password: String): Int {
     require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
