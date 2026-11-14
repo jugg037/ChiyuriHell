@@ -289,8 +289,16 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                 confirmButton = {
                     TextButton(onClick = {
                         val target = renameTarget
-                        val renamed = target != null && renameValue.isNotBlank() && runCatching { target.renameTo(renameValue.trim()) }.getOrDefault(false)
-                        message = if (renamed) "Имя изменено" else "Не удалось переименовать"
+                        val cleanName = renameValue.trim()
+                        val validName = cleanName.isNotBlank() && cleanName != "." && cleanName != ".." &&
+                            !cleanName.contains('/') && !cleanName.contains('\\')
+                        val renamed = target != null && validName && target.canWrite() &&
+                            runCatching { target.renameTo(cleanName) }.getOrDefault(false)
+                        message = when {
+                            !validName -> "Недопустимое имя элемента"
+                            renamed -> "Имя изменено"
+                            else -> "Не удалось переименовать"
+                        }
                         if (renamed) refreshKey++
                         renameTarget = null
                     }) { Text("Сохранить", color = LocalAccent.current) }
