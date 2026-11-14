@@ -18,7 +18,7 @@ Do not create RELEASE_READY or push a version tag until every applicable check b
 - [ ] Test pin, unpin, reorder and persistence of taskbar applications
 - [ ] Test all three workspaces, custom names and per-workspace desktop shortcuts
 - [ ] Test recent-app list and Alt+Tab with and without Usage Access
-- [ ] Test simultaneous built-in panels, focus, adjustable width, minimize, restore and close
+- [ ] Test Android Back behavior plus simultaneous built-in panels, focus, adjustable width, minimize, restore and close
 - [ ] Test app drawer tile density and taskbar battery/date visibility preferences
 - [ ] Test Android adjacent/split-screen launch on supported applications
 - [ ] Grant Usage Access and verify foreground-app highlighting; repeat without the permission
