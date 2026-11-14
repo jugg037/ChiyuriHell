@@ -160,8 +160,9 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Сортировка:", color = Muted, fontSize = 10.sp)
             TextButton(enabled = !isBusy, onClick = {
-                sortMode = when (sortMode) { "name" -> "date"; "date" -> "size"; "size" -> "type"; else -> "name" }
-                prefs.edit().putString("file_sort_mode", sortMode).apply()
+                val nextMode = nextFileSortMode(sortMode)
+                sortMode = nextMode
+                prefs.edit().putString("file_sort_mode", nextMode).apply()
             }) {
                 Text(when (sortMode) { "date" -> "По дате"; "size" -> "По размеру"; "type" -> "По типу"; else -> "По имени" }, color = LocalAccent.current, fontSize = 10.sp)
             }
