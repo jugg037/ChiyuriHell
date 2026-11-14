@@ -6,10 +6,10 @@
 - Start menu with searchable installed Android apps and direct app launching.
 - Persistent taskbar pins with reordering and recent-app navigation.
 - Three customizable workspaces with independent desktop shortcuts.
-- Resizable launcher panels for File Explorer and appearance settings.
+- Resizable launcher panels for File Explorer and appearance settings, with responsive dual-panel sizing on wide tablets and automatic single-panel fallback on narrower screens.
 - Tablet-oriented keyboard shortcuts and Android Back/Escape navigation.
 - Wallpaper presets, custom wallpapers, fit/fill/stretch modes and crimson accent choices.
-- File manager with Storage Access Framework permissions, search, sorting, breadcrumbs, refresh and common file operations.
+- File manager with Storage Access Framework permissions, search, sorting, breadcrumbs, manual refresh and common file operations.
 - ZIP, RAR and 7Z archive listing and extraction with password support where supported, path-safety checks and resource limits.
 - Device dashboard with battery, storage, memory, network and Chiyuri process information.
 - Optional Usage Access for recent-app switching and foreground indicators; root access is never required.
