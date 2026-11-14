@@ -3,6 +3,7 @@ package com.chiyuri.desktop
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -150,12 +151,14 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                                 renameValue = entry.name ?: ""
                             }) { Text("Имя", color = Muted, fontSize = 10.sp) }
                         if (!entry.isDirectory) {
-                            TextButton(onClick = { clipboardFile = entry; clipboardMove = false; message = "Файл добавлен в буфер копирования" }) {
-                                Text("Копия", color = Muted, fontSize = 9.sp)
-                            }
-                            TextButton(onClick = { clipboardFile = entry; clipboardMove = true; message = "Файл готов к переносу" }) {
-                                Text("Вырезать", color = Muted, fontSize = 9.sp)
-                            }
+                        }
+                        TextButton(onClick = { clipboardFile = entry; clipboardMove = false; message = "Элемент добавлен в буфер копирования" }) {
+                            Text("Копия", color = Muted, fontSize = 9.sp)
+                        }
+                        TextButton(onClick = { clipboardFile = entry; clipboardMove = true; message = "Элемент готов к переносу" }) {
+                            Text("Вырезать", color = Muted, fontSize = 9.sp)
+                        }
+                        if (!entry.isDirectory) {
                             when {
                                 entry.name?.endsWith(".zip", ignoreCase = true) == true -> {
                                     TextButton(onClick = { previewArchive(entry, "ZIP") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
@@ -192,15 +195,15 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                     val source = clipboardFile
                     val destination = current
                     if (source != null && destination != null) {
-                        message = if (clipboardMove) "Перенос файла…" else "Копирование файла…"
+                        message = if (clipboardMove) "Перенос элемента…" else "Копирование элемента…"
                         scope.launch(Dispatchers.IO) {
                             val result = runCatching {
-                                val copied = copyDocumentFile(context, source, destination)
+                                val copied = copyDocumentEntry(context, source, destination)
                                 if (copied && clipboardMove && !source.delete()) throw IOException("Копия создана, но исходный файл удалить не удалось")
                                 copied
                             }
                             withContext(Dispatchers.Main) {
-                                message = result.fold({ if (it) "Файл ${if (clipboardMove) "перенесён" else "скопирован"}" else "Файл с таким именем уже существует" }, { "Операция не выполнена: ${it.localizedMessage}" })
+                                message = result.fold({ if (it) "Элемент ${if (clipboardMove) "перенесён" else "скопирован"}" else "Элемент с таким именем уже существует" }, { "Операция не выполнена: ${it.localizedMessage}" })
                                 if (result.getOrDefault(false)) {
                                     refreshKey++
                                     clipboardFile = null
@@ -248,23 +251,64 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     }
 }
 
-private fun copyDocumentFile(context: Context, source: DocumentFile, destination: DocumentFile): Boolean {
-    require(!source.isDirectory) { "Копирование папок пока не поддерживается" }
-    val name = source.name ?: "file"
-    if (destination.findFile(name) != null) return false
+private data class CopyBudget(var entries: Int = 0, var bytes: Long = 0L)
+
+private fun copyDocumentEntry(
+    context: Context,
+    source: DocumentFile,
+    destination: DocumentFile,
+    budget: CopyBudget,
+    created: MutableList<DocumentFile>
+): DocumentFile {
+    budget.entries++
+    if (budget.entries > 1000) throw IOException("В операции больше 1000 элементов")
+    val name = source.name?.takeIf { it.isNotBlank() } ?: "Без имени"
+    if (destination.findFile(name) != null) throw IOException("Элемент с именем $name уже существует")
+    if (source.isDirectory) {
+        val targetDirectory = destination.createDirectory(name)
+            ?: throw IOException("Не удалось создать папку $name")
+        created += targetDirectory
+        source.listFiles().forEach { child ->
+            copyDocumentEntry(context, child, targetDirectory, budget, created)
+        }
+        return targetDirectory
+    }
     val target = destination.createFile(source.type ?: "application/octet-stream", name)
-        ?: throw IOException("Не удалось создать файл назначения")
-    try {
-        context.contentResolver.openInputStream(source.uri).use { input ->
-            requireNotNull(input) { "Не удалось прочитать исходный файл" }
-            context.contentResolver.openOutputStream(target.uri).use { output ->
-                requireNotNull(output) { "Не удалось записать файл" }
-                input.copyTo(output)
+        ?: throw IOException("Не удалось создать файл $name")
+    created += target
+    context.contentResolver.openInputStream(source.uri).use { input ->
+        requireNotNull(input) { "Не удалось прочитать исходный файл" }
+        context.contentResolver.openOutputStream(target.uri).use { output ->
+            requireNotNull(output) { "Не удалось записать файл" }
+            val buffer = ByteArray(8192)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                budget.bytes += count
+                if (budget.bytes > 512L * 1024L * 1024L) throw IOException("Копирование ограничено 512 МБ за операцию")
+                output.write(buffer, 0, count)
             }
         }
+    }
+    return target
+}
+
+private fun copyDocumentEntry(context: Context, source: DocumentFile, destination: DocumentFile): Boolean {
+    if (destination.findFile(source.name ?: "Без имени") != null) return false
+    if (source.isDirectory) {
+        val sourceId = runCatching { DocumentsContract.getDocumentId(source.uri) }.getOrNull()
+        val destinationId = runCatching { DocumentsContract.getDocumentId(destination.uri) }.getOrNull()
+        if (sourceId != null && destinationId != null &&
+            (destinationId == sourceId || destinationId.startsWith("$sourceId/"))) {
+            throw IOException("Нельзя копировать папку внутрь самой себя")
+        }
+    }
+    val created = mutableListOf<DocumentFile>()
+    return try {
+        copyDocumentEntry(context, source, destination, CopyBudget(), created)
+        true
     } catch (error: Exception) {
-        target.delete()
+        created.asReversed().forEach { runCatching { it.delete() } }
         throw error
     }
-    return true
 }
