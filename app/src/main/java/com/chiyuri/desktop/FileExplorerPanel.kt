@@ -145,7 +145,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                             Text(entry.name ?: "Без названия", color = MainText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
                         }
-                            TextButton(onClick = {
+                            TextButton(enabled = current?.canWrite() == true, onClick = {
                                 renameTarget = entry
                                 renameValue = entry.name ?: ""
                             }) { Text("Имя", color = Muted, fontSize = 10.sp) }
@@ -159,18 +159,18 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                             when {
                                 entry.name?.endsWith(".zip", ignoreCase = true) == true -> {
                                     TextButton(onClick = { previewArchive(entry, "ZIP") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = LocalAccent.current, fontSize = 10.sp) }
+                                    TextButton(enabled = current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = LocalAccent.current, fontSize = 10.sp) }
                                 }
                                 entry.name?.endsWith(".7z", ignoreCase = true) == true -> {
                                     TextButton(onClick = { previewArchive(entry, "7Z") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = LocalAccent.current, fontSize = 10.sp) }
+                                    TextButton(enabled = current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = LocalAccent.current, fontSize = 10.sp) }
                                 }
                                 entry.name?.endsWith(".rar", ignoreCase = true) == true -> {
                                     TextButton(onClick = { previewArchive(entry, "RAR") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = LocalAccent.current, fontSize = 10.sp) }
+                                    TextButton(enabled = current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = LocalAccent.current, fontSize = 10.sp) }
                                 }
                             }
-                            TextButton(onClick = {
+                            TextButton(enabled = current?.canWrite() == true, onClick = {
                                 val deleted = runCatching { entry.delete() }.getOrDefault(false)
                                 message = if (deleted) "Файл удалён" else "Не удалось удалить файл"
                                 if (deleted) refreshKey++
@@ -182,13 +182,13 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         }
         if (root != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = {
+                TextButton(enabled = current?.canWrite() == true, onClick = {
                     val created = runCatching { current?.createDirectory("Новая папка") != null }.getOrDefault(false)
                     message = if (created) "Папка создана" else "Не удалось создать папку"
                     if (created) refreshKey++
                 }) { Text("＋ Новая папка", color = LocalAccent.current) }
                 Spacer(Modifier.weight(1f))
-                TextButton(enabled = clipboardFile != null, onClick = {
+                TextButton(enabled = clipboardFile != null && current?.canWrite() == true, onClick = {
                     val source = clipboardFile
                     val destination = current
                     if (source != null && destination != null) {
