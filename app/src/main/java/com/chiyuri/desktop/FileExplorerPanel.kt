@@ -190,6 +190,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
             OutlinedButton(enabled = !isBusy, onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
             if (folderStack.isNotEmpty()) OutlinedButton(enabled = !isBusy, onClick = { folderStack = folderStack.dropLast(1); fileSearch = "" }) { Text("Назад") }
             if (folderStack.isNotEmpty()) OutlinedButton(enabled = !isBusy, onClick = { folderStack = emptyList(); fileSearch = "" }) { Text("Корень") }
+            OutlinedButton(enabled = !isBusy, onClick = { refreshKey++ }) { Text("Обновить") }
         }
         if (root == null) {
             Spacer(Modifier.height(16.dp))
