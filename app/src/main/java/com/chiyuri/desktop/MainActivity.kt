@@ -74,11 +74,15 @@ private fun ChiyuriTheme(content: @Composable () -> Unit) {
 @Composable
 private fun DesktopScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val apps = remember { loadApps(context) }
+    var apps by remember { mutableStateOf(loadApps(context)) }
     var startOpen by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var clock by remember { mutableStateOf(nowTime()) }
     var date by remember { mutableStateOf(nowDate()) }
+
+    LaunchedEffect(startOpen) {
+        if (startOpen) apps = loadApps(context)
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -177,17 +181,30 @@ private fun DesktopScreen() {
                             Spacer(Modifier.height(10.dp))
                             Text("Все приложения", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
                             Spacer(Modifier.height(6.dp))
-                            LazyVerticalGrid(
-                                columns = GridCells.Adaptive(minSize = 76.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                items(visibleApps, key = { it.packageName }) { app ->
-                                    AppTile(app) {
-                                        launchApp(context, app)
-                                        startOpen = false
-                                        search = ""
+                            if (visibleApps.isEmpty()) {
+                                Box(
+                                    Modifier.weight(1f).fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        if (search.isBlank()) "Нет доступных приложений" else "Ничего не найдено",
+                                        color = Muted,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            } else {
+                                LazyVerticalGrid(
+                                    columns = GridCells.Adaptive(minSize = 76.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    items(visibleApps, key = { it.packageName }) { app ->
+                                        AppTile(app) {
+                                            launchApp(context, app)
+                                            startOpen = false
+                                            search = ""
+                                        }
                                     }
                                 }
                             }
