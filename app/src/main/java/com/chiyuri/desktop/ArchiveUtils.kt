@@ -130,6 +130,7 @@ private fun copyRarSetToTemp(context: Context, archiveFile: DocumentFile): Pair<
         val prefix = selectedPart.groupValues[1]
         val parent = archiveFile.parentFile
         val found = parent?.listFiles().orEmpty().mapNotNull { item ->
+            if (!item.isFile) return@mapNotNull null
             val match = partPattern.matchEntire(item.name ?: "") ?: return@mapNotNull null
             if (!match.groupValues[1].equals(prefix, ignoreCase = true)) return@mapNotNull null
             val number = match.groupValues[2].toIntOrNull() ?: return@mapNotNull null
@@ -168,9 +169,7 @@ private fun copyRarSetToTemp(context: Context, archiveFile: DocumentFile): Pair<
             }
             target
         }
-        val first = copied.firstOrNull { it.name.equals(name, ignoreCase = true) }
-            ?: copied.first()
-        return tempDir to first
+        return tempDir to copied.first()
     } catch (error: Exception) {
         tempDir.deleteRecursively()
         throw error
