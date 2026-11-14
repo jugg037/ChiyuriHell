@@ -1,6 +1,7 @@
 package com.chiyuri.desktop
 
 import android.content.Context
+import android.webkit.MimeTypeMap
 import androidx.documentfile.provider.DocumentFile
 import com.github.junrar.Archive
 import com.github.junrar.ArchiveOptions
@@ -70,11 +71,16 @@ internal fun safeArchiveEntryPath(rawName: String): List<String>? {
     return segments
 }
 
+private fun mimeTypeForArchiveName(name: String): String {
+    val extension = name.substringAfterLast('.', "").lowercase(Locale.ROOT)
+    return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "application/octet-stream"
+}
+
 private fun createArchiveTarget(
     destination: DocumentFile,
     path: List<String>,
     isDirectory: Boolean,
-    mimeType: String = "application/octet-stream"
+    mimeType: String? = null
 ): DocumentFile? {
     if (path.isEmpty()) return null
     var parent = destination
@@ -95,7 +101,7 @@ private fun createArchiveTarget(
             else -> parent.createDirectory(name)
         }
     } else {
-        if (existing != null) null else parent.createFile(mimeType, name)
+        if (existing != null) null else parent.createFile(mimeType ?: mimeTypeForArchiveName(name), name)
     }
 }
 
