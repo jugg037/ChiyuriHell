@@ -55,6 +55,8 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Basic file operations: create folders, rename files/folders and confirm recursive deletion using granted SAF permissions
 - [x] Copy/move files and folders recursively using SAF, with entry and size limits
 - [ ] Advanced permission/error recovery
+  - [x] Detect expired SAF folder grants and request folder selection again
+  - [x] Detect read-only folders and disable write operations
 - [x] ZIP, RAR and 7Z extraction with entry-count and expanded-size limits
 - [x] Optional archive password field; memory caps for 7Z and RAR extraction
 - [x] Archive preview/listing before extraction
