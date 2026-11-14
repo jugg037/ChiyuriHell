@@ -150,6 +150,12 @@ private fun DesktopScreen() {
         launchApp(context, app)
     }
 
+    fun openAppAdjacent(app: LaunchApp) {
+        lastLaunchedPackage = app.packageName
+        recentPackages = recordRecentApp(context, app.packageName)
+        launchAppAdjacent(context, app)
+    }
+
     fun toggleDesktopShortcut(app: LaunchApp) {
         val updated = if (app.packageName in desktopPackages) desktopPackages - app.packageName
             else desktopPackages + app.packageName
@@ -353,7 +359,8 @@ private fun DesktopScreen() {
                                                 search = ""
                                             },
                                             onLongClick = { togglePin(app) },
-                                            onDesktopToggle = { toggleDesktopShortcut(app) }
+                                            onDesktopToggle = { toggleDesktopShortcut(app) },
+                                            onAdjacentClick = { openAppAdjacent(app) }
                                         )
                                     }
                                 }
@@ -431,7 +438,8 @@ private fun AppTile(
     desktopShortcut: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onDesktopToggle: () -> Unit
+    onDesktopToggle: () -> Unit,
+    onAdjacentClick: () -> Unit
 ) {
     Column(
         Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)
@@ -451,6 +459,9 @@ private fun AppTile(
             TextButton(onClick = onDesktopToggle, contentPadding = PaddingValues(0.dp)) {
                 Text(if (desktopShortcut) "Убрать ярлык" else "+ На стол", color = if (desktopShortcut) Crimson else Muted, fontSize = 8.sp)
             }
+        }
+        TextButton(onClick = onAdjacentClick, contentPadding = PaddingValues(0.dp)) {
+            Text("Открыть рядом", color = Muted, fontSize = 8.sp)
         }
     }
 }
@@ -720,6 +731,13 @@ private fun saveDesktopPackages(context: Context, packages: Set<String>) {
 
 private fun launchApp(context: Context, app: LaunchApp) {
     context.packageManager.getLaunchIntentForPackage(app.packageName)?.let(context::startActivity)
+}
+
+private fun launchAppAdjacent(context: Context, app: LaunchApp) {
+    context.packageManager.getLaunchIntentForPackage(app.packageName)?.let { intent ->
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
+        context.startActivity(intent)
+    }
 }
 
 private fun networkAvailable(context: Context): Boolean {
