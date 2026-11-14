@@ -81,6 +81,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 private val Night = Color(0xFF09090B)
 private val Panel = Color(0xEE17171C)
@@ -131,6 +132,9 @@ private fun DesktopScreen() {
     var activePanel by remember { mutableStateOf("files") }
     var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
     var accentStyle by remember { mutableIntStateOf(loadAccentStyle(context)) }
+    var rootStatus by remember { mutableStateOf("Не проверено") }
+    var rootChecking by remember { mutableStateOf(false) }
+    val uiScope = rememberCoroutineScope()
     var wallpaperScale by remember { mutableIntStateOf(loadWallpaperScale(context)) }
     val focusRequester = remember { FocusRequester() }
     var recentPackages by remember { mutableStateOf(loadRecentPackages(context)) }
@@ -388,6 +392,20 @@ private fun DesktopScreen() {
                             Text("Батарея: ${batteryPercent(context)}% · ${batteryState(context)}", color = MainText, fontSize = 11.sp)
                             Text("Раздел данных: ${storageSummary()}", color = MainText, fontSize = 11.sp)
                             Text("Сеть: ${if (networkAvailable(context)) "подключена" else "нет подключения"}", color = MainText, fontSize = 11.sp)
+                            Text("Дополнительные права", color = Muted, fontSize = 12.sp)
+                            Text("Root не нужен для обычной работы лаунчера. Проверка запускается только вручную.", color = Muted, fontSize = 10.sp)
+                            Text("Состояние: $rootStatus", color = MainText, fontSize = 11.sp)
+                            TextButton(enabled = !rootChecking, onClick = {
+                                rootChecking = true
+                                rootStatus = "Ожидание ответа системы…"
+                                uiScope.launch(Dispatchers.IO) {
+                                    val result = checkRootAccess()
+                                    withContext(Dispatchers.Main) {
+                                        rootStatus = result
+                                        rootChecking = false
+                                    }
+                                }
+                            }) { Text(if (rootChecking) "Проверка…" else "Проверить root-доступ", color = LocalAccent.current) }
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = LocalAccent.current) }
                             Spacer(Modifier.weight(1f))
@@ -1221,6 +1239,23 @@ private fun launchAppAdjacent(context: Context, app: LaunchApp) {
         context.startActivity(intent)
     }.onFailure {
         Toast.makeText(context, "Не удалось открыть рядом. Попробуй сначала включить разделённый экран Android.", Toast.LENGTH_LONG).show()
+    }
+}
+
+private fun checkRootAccess(): String {
+    return try {
+        val process = ProcessBuilder("su", "-c", "id").redirectErrorStream(true).start()
+        val completed = process.waitFor(20, TimeUnit.SECONDS)
+        if (!completed) {
+            process.destroyForcibly()
+            "Проверка не завершена вовремя"
+        } else {
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            if (process.exitValue() == 0 && output.contains("uid=0")) "Root-доступ подтверждён"
+            else "Root-доступ не предоставлен"
+        }
+    } catch (_: Exception) {
+        "Root-доступ не обнаружен"
     }
 }
 
