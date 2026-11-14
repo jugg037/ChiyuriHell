@@ -232,15 +232,17 @@ private fun DesktopScreen() {
     }
 
     fun openApp(app: LaunchApp) {
-        lastLaunchedPackage = app.packageName
-        recentPackages = recordRecentApp(context, app.packageName)
-        launchApp(context, app)
+        if (launchApp(context, app)) {
+            lastLaunchedPackage = app.packageName
+            recentPackages = recordRecentApp(context, app.packageName)
+        }
     }
 
     fun openAppAdjacent(app: LaunchApp) {
-        lastLaunchedPackage = app.packageName
-        recentPackages = recordRecentApp(context, app.packageName)
-        launchAppAdjacent(context, app)
+        if (launchAppAdjacent(context, app)) {
+            lastLaunchedPackage = app.packageName
+            recentPackages = recordRecentApp(context, app.packageName)
+        }
     }
 
     fun switchWorkspace(index: Int) {
@@ -1346,27 +1348,34 @@ private fun saveDesktopPackages(context: Context, workspace: Int, packages: Set<
         .edit().putStringSet("desktop_shortcuts_$workspace", packages.toSet()).apply()
 }
 
-private fun launchApp(context: Context, app: LaunchApp) {
+private fun launchApp(context: Context, app: LaunchApp): Boolean {
     val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
     if (intent == null) {
         Toast.makeText(context, "Приложение больше недоступно", Toast.LENGTH_SHORT).show()
-        return
+        return false
     }
-    runCatching { context.startActivity(intent) }
-        .onFailure { Toast.makeText(context, "Не удалось запустить приложение", Toast.LENGTH_SHORT).show() }
+    return runCatching {
+        context.startActivity(intent)
+        true
+    }.getOrElse {
+        Toast.makeText(context, "Не удалось запустить приложение", Toast.LENGTH_SHORT).show()
+        false
+    }
 }
 
-private fun launchAppAdjacent(context: Context, app: LaunchApp) {
+private fun launchAppAdjacent(context: Context, app: LaunchApp): Boolean {
     val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
     if (intent == null) {
         Toast.makeText(context, "Приложение больше недоступно", Toast.LENGTH_SHORT).show()
-        return
+        return false
     }
-    runCatching {
+    return runCatching {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
         context.startActivity(intent)
-    }.onFailure {
+        true
+    }.getOrElse {
         Toast.makeText(context, "Не удалось открыть рядом. Попробуй сначала включить разделённый экран Android.", Toast.LENGTH_LONG).show()
+        false
     }
 }
 
