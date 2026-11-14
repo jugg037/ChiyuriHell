@@ -370,7 +370,7 @@ private fun DesktopScreen() {
                 .width(3.dp).height(92.dp).background(LocalAccent.current, RoundedCornerShape(4.dp))
         )
 
-        Column(Modifier.fillMaxSize().padding(bottom = 58.dp)) {
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().padding(bottom = 58.dp)) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -696,7 +696,7 @@ private fun DesktopScreen() {
         }
 
         Row(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(58.dp)
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).imePadding().height(58.dp)
                 .background(Color(0xF20D0D11)).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
