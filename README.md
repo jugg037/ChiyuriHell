@@ -41,6 +41,7 @@ The project is developed in `main` in feature stages. **No public release is pla
   - [x] Taskbar shortcuts can reopen/focus the built-in panels
 - [ ] Window focus, minimize/restore and close behavior for supported in-app panels
 - [ ] Tablet-oriented split layouts and keyboard/mouse interaction
+  - [x] Keyboard shortcuts: Ctrl+Space (Start), Ctrl+Alt+F (Files), Ctrl+Alt+S (Settings), Ctrl+1/2/3 (workspaces), Alt+Tab (recent launcher apps)
 - [ ] Clearly report Android/firmware limitations rather than simulate unsupported OS-level window control
 
 ### Stage 0.3 — File manager
@@ -75,7 +76,7 @@ GitHub Actions builds a debug APK on pushes to `main` and manual workflow dispat
 Artifact: `ChiyuriDesktop-debug`.
 
 ## Important limitations
-This is a launcher, not a Windows emulator or replacement OS. It does not yet provide true independent virtual desktops, arbitrary resizable app windows, or privileged system controls. Those features will be developed only where Android APIs and Samsung firmware permit them.
+This is a launcher, not a Windows emulator or replacement OS. The three workspaces separate launcher desktop shortcuts, but Android does not expose isolated external-app task spaces to ordinary launchers. System-level task switching and arbitrary external app window management remain limited by Android and Samsung firmware. Chiyuri Desktop can request adjacent/split-screen launches and provide its own multi-panel workspace, but cannot force unsupported windowing behavior.
 
 ## Install
 Download the APK artifact from the Actions run, install it, press Home and select **Chiyuri Desktop**. To return to Samsung's launcher, select One UI Home in Android's default Home app settings.
