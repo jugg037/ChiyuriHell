@@ -8,6 +8,8 @@ import android.net.Uri
 import android.graphics.drawable.Drawable
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Environment
+import android.os.StatFs
 import android.app.ActivityManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -278,6 +280,8 @@ private fun DesktopScreen() {
                             Text("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})", color = MainText, fontSize = 11.sp)
                             Text("Оперативная память: ${availableMemory(context)} свободно", color = MainText, fontSize = 11.sp)
                             Text("Батарея: ${batteryPercent(context)}%", color = MainText, fontSize = 11.sp)
+                            Text("Хранилище: ${storageSummary()}", color = MainText, fontSize = 11.sp)
+                            Text("Сеть: ${if (networkAvailable(context)) "подключена" else "нет подключения"}", color = MainText, fontSize = 11.sp)
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = Crimson) }
                             Spacer(Modifier.weight(1f))
@@ -753,6 +757,15 @@ private fun recordRecentApp(context: Context, packageName: String): List<String>
         .putString("last_launched_package", packageName).putString("recent_packages", updated.joinToString("|")).apply()
     return updated
 }
+
+private fun storageSummary(): String {
+    val stats = StatFs(Environment.getDataDirectory().path)
+    val total = stats.blockCountLong * stats.blockSizeLong
+    val free = stats.availableBlocksLong * stats.blockSizeLong
+    return String.format(Locale.getDefault(), "%.1f / %.1f ГБ свободно", free / (1024.0.pow(3)), total / (1024.0.pow(3)))
+}
+
+private fun Double.pow(power: Int): Double = kotlin.math.pow(this, power.toDouble())
 
 private fun availableMemory(context: Context): String {
     val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
