@@ -170,11 +170,23 @@ private fun DesktopScreen() {
     }
 
     val visibleApps = apps.filter { it.label.contains(search, ignoreCase = true) }
-    val pinnedApps = apps.filter { it.packageName in pinnedPackages }
+    val pinnedApps = pinnedPackages.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }
 
     fun togglePin(app: LaunchApp) {
-        val updated = if (app.packageName in pinnedPackages) pinnedPackages - app.packageName
+        val updated = if (app.packageName in pinnedPackages) pinnedPackages.filterNot { it == app.packageName }
             else pinnedPackages + app.packageName
+        pinnedPackages = updated
+        savePinnedPackages(context, updated)
+    }
+
+    fun movePinned(app: LaunchApp, direction: Int) {
+        val from = pinnedPackages.indexOf(app.packageName)
+        if (from < 0) return
+        val to = (from + direction).coerceIn(0, pinnedPackages.lastIndex)
+        if (from == to) return
+        val updated = pinnedPackages.toMutableList()
+        val item = updated.removeAt(from)
+        updated.add(to, item)
         pinnedPackages = updated
         savePinnedPackages(context, updated)
     }
@@ -497,7 +509,9 @@ private fun DesktopScreen() {
                                             },
                                             onLongClick = { togglePin(app) },
                                             onDesktopToggle = { toggleDesktopShortcut(app) },
-                                            onAdjacentClick = { openAppAdjacent(app) }
+                                            onAdjacentClick = { openAppAdjacent(app) },
+                                            onMoveLeft = { movePinned(app, -1) },
+                                            onMoveRight = { movePinned(app, 1) }
                                         )
                                     }
                                 }
@@ -588,7 +602,9 @@ private fun AppTile(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onDesktopToggle: () -> Unit,
-    onAdjacentClick: () -> Unit
+    onAdjacentClick: () -> Unit,
+    onMoveLeft: () -> Unit,
+    onMoveRight: () -> Unit
 ) {
     Column(
         Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)
@@ -603,14 +619,20 @@ private fun AppTile(
         Spacer(Modifier.height(6.dp))
         Text(app.label, color = MainText, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (pinned) "На панели" else "Закрепить", color = if (pinned) LocalAccent.current else Muted, fontSize = 8.sp)
+            Text(if (pinned) "На панели" else "Удержи: закрепить", color = if (pinned) LocalAccent.current else Muted, fontSize = 8.sp)
             Text("·", color = Muted, fontSize = 8.sp)
             TextButton(onClick = onDesktopToggle, contentPadding = PaddingValues(0.dp)) {
                 Text(if (desktopShortcut) "Убрать ярлык" else "+ На стол", color = if (desktopShortcut) LocalAccent.current else Muted, fontSize = 8.sp)
             }
         }
-        TextButton(onClick = onAdjacentClick, contentPadding = PaddingValues(0.dp)) {
-            Text("Открыть рядом", color = Muted, fontSize = 8.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (pinned) {
+                TextButton(onClick = onMoveLeft, contentPadding = PaddingValues(0.dp)) { Text("←", color = Muted, fontSize = 10.sp) }
+                TextButton(onClick = onMoveRight, contentPadding = PaddingValues(0.dp)) { Text("→", color = Muted, fontSize = 10.sp) }
+            }
+            TextButton(onClick = onAdjacentClick, contentPadding = PaddingValues(0.dp)) {
+                Text("Рядом", color = Muted, fontSize = 8.sp)
+            }
         }
     }
 }
@@ -1222,19 +1244,29 @@ private fun loadApps(context: Context): List<LaunchApp> {
         .sortedBy { it.label.lowercase(Locale.getDefault()) }
 }
 
-private fun loadPinnedPackages(context: Context, apps: List<LaunchApp>): Set<String> {
+private fun loadPinnedPackages(context: Context, apps: List<LaunchApp>): List<String> {
     val prefs = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
+    val ordered = prefs.getString("pinned_packages_ordered", null)
+    if (ordered != null) return ordered.split("|").filter { it.isNotBlank() }
     if (prefs.getBoolean("pins_initialized", false)) {
-        return prefs.getStringSet("pinned_packages", emptySet())?.toSet() ?: emptySet()
+        val legacy = prefs.getStringSet("pinned_packages", emptySet()).orEmpty()
+        val migrated = apps.filter { it.packageName in legacy }.map { it.packageName }
+        savePinnedPackages(context, migrated)
+        return migrated
     }
-    val defaults = apps.take(5).map { it.packageName }.toSet()
-    prefs.edit().putStringSet("pinned_packages", defaults).putBoolean("pins_initialized", true).apply()
+    val defaults = apps.take(5).map { it.packageName }
+    savePinnedPackages(context, defaults)
+    prefs.edit().putBoolean("pins_initialized", true).apply()
     return defaults
 }
 
-private fun savePinnedPackages(context: Context, packages: Set<String>) {
-    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
-        .edit().putStringSet("pinned_packages", packages.toSet()).apply()
+private fun savePinnedPackages(context: Context, packages: List<String>) {
+    val prefs = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
+    prefs.edit()
+        .putString("pinned_packages_ordered", packages.joinToString("|"))
+        .putStringSet("pinned_packages", packages.toSet())
+        .putBoolean("pins_initialized", true)
+        .apply()
 }
 
 private fun loadWorkspace(context: Context): Int = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("active_workspace", 0).coerceIn(0, 2)
