@@ -152,6 +152,17 @@ private fun DesktopScreen() {
     var systemRecentPackages by remember { mutableStateOf<List<String>>(emptyList()) }
     var usageSince by remember { mutableLongStateOf(System.currentTimeMillis() - 24L * 60L * 60L * 1000L) }
     val uiScope = rememberCoroutineScope()
+    LaunchedEffect(isWideLayout) {
+        if (!isWideLayout && filesOpen && settingsOpen) {
+            if (activePanel == "files") {
+                settingsOpen = false
+                settingsMinimized = false
+            } else {
+                filesOpen = false
+                filesMinimized = false
+            }
+        }
+    }
     var wallpaperScale by remember { mutableIntStateOf(loadWallpaperScale(context)) }
     val focusRequester = remember { FocusRequester() }
     var recentPackages by remember { mutableStateOf(loadRecentPackages(context)) }
