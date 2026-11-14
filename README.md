@@ -50,8 +50,9 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Basic file operations: create folders, rename and delete entries using granted SAF permissions
 - [x] Copy/move files in the selected folder using SAF
 - [ ] Advanced permission/error recovery and folder copy/move
-- [ ] Archive browsing and extraction for RAR and 7Z where compatible libraries and licenses permit
-- [x] ZIP extraction with entry-count and expanded-size limits
+- [x] ZIP, RAR and 7Z extraction with entry-count and expanded-size limits
+- [x] Optional archive password field; memory caps for 7Z and RAR extraction
+- [ ] Archive preview/listing before extraction, multi-volume RAR, and broader codec compatibility
 - [ ] Error handling for inaccessible, protected and unsupported files
 
 ### Stage 0.5 — System tools and advanced settings
@@ -69,6 +70,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 ### Explicit exclusions
 - Windows OS emulation, EXE/Wine and the previously discussed Winlator stage are excluded.
 - Android APK is the only target package.
+- Third-party archive-library licenses and restrictions are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/`.
 - A feature that Android or the target Samsung firmware cannot safely provide must be documented as a platform limitation, not falsely marked complete.
 
 ## Build
