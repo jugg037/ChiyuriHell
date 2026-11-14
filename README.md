@@ -40,7 +40,8 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Final portrait/landscape layout validation on SM-P619
 
 ### Stage 0.2 — Multitasking
-- [ ] System recent-task switching (restricted by Android)
+- [ ] System recent-task stack switching (restricted by Android)
+  - [x] Usage Access-based recent-app list and Alt+Tab switching (package history, not Android task-stack control)
   - [x] Launcher-local recent launch history (last 8 apps)
   - [x] Last-launched app marker on the taskbar (not a claim of current foreground state)
 - [x] Launcher multi-workspace and built-in window-like panels; external windows remain Android/Samsung-limited
