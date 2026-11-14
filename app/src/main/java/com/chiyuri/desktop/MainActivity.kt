@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.net.Uri
 import android.graphics.drawable.Drawable
 import android.os.BatteryManager
 import android.os.Bundle
@@ -435,6 +434,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
         })
     }
     var folderStack by remember { mutableStateOf(emptyList<DocumentFile>()) }
+    var refreshKey by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -448,7 +448,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
         }
     }
     val current = folderStack.lastOrNull() ?: root
-    val entries = remember(current) {
+    val entries = remember(current, refreshKey) {
         runCatching { current?.listFiles()?.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { it.name?.lowercase(Locale.getDefault()) ?: "" }).orEmpty() }
             .getOrElse { emptyList() }
     }
@@ -494,6 +494,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
                         if (!entry.isDirectory) TextButton(onClick = {
                             val deleted = runCatching { entry.delete() }.getOrDefault(false)
                             message = if (deleted) "Файл удалён" else "Не удалось удалить файл"
+                            if (deleted) refreshKey++
                         }) { Text("Удалить", color = Crimson, fontSize = 10.sp) }
                     }
                 }
@@ -502,6 +503,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
         if (root != null) TextButton(onClick = {
             val created = runCatching { current?.createDirectory("Новая папка") != null }.getOrDefault(false)
             message = if (created) "Папка создана" else "Не удалось создать папку"
+            if (created) refreshKey++
         }) { Text("＋ Новая папка", color = Crimson) }
     }
 }
