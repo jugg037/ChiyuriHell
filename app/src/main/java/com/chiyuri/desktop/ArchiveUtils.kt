@@ -60,6 +60,45 @@ private fun copyArchiveToTemp(context: Context, archive: DocumentFile, prefix: S
 internal fun safeArchiveEntryName(rawName: String): String =
     rawName.substringAfterLast('/').substringAfterLast('\\').trim()
 
+internal fun safeArchiveEntryPath(rawName: String): List<String>? {
+    val normalized = rawName.trim().replace('\\', '/')
+    if (normalized.isBlank() || normalized.startsWith("/") ||
+        Regex("^[A-Za-z]:").containsMatchIn(normalized)) return null
+    val segments = normalized.split('/').filter { it.isNotEmpty() }
+    if (segments.isEmpty() || segments.size > 64 ||
+        segments.any { it == "." || it == ".." || it.length > 255 || it.any(Char::isISOControl) }) return null
+    return segments
+}
+
+private fun createArchiveTarget(
+    destination: DocumentFile,
+    path: List<String>,
+    isDirectory: Boolean,
+    mimeType: String = "application/octet-stream"
+): DocumentFile? {
+    if (path.isEmpty()) return null
+    var parent = destination
+    path.dropLast(1).forEach { segment ->
+        val existing = parent.findFile(segment)
+        parent = when {
+            existing == null -> parent.createDirectory(segment) ?: return null
+            existing.isDirectory -> existing
+            else -> return null
+        }
+    }
+    val name = path.last()
+    val existing = parent.findFile(name)
+    return if (isDirectory) {
+        when {
+            existing?.isDirectory == true -> existing
+            existing != null -> null
+            else -> parent.createDirectory(name)
+        }
+    } else {
+        if (existing != null) null else parent.createFile(mimeType, name)
+    }
+}
+
 internal fun extractSevenZArchive(context: Context, archive: DocumentFile, destination: DocumentFile?, password: String): Int {
     require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
     val tempFile = File.createTempFile("chiyuri-7z-", ".7z", context.cacheDir)
@@ -88,28 +127,26 @@ internal fun extractSevenZArchive(context: Context, archive: DocumentFile, desti
             while (entry != null) {
                 processed++
                 if (processed > 1000) throw IOException("В архиве больше 1000 элементов")
-                if (!entry.isDirectory) {
-                    val name = safeArchiveEntryName(entry.name ?: "")
-                    if (name.isNotBlank() && name != "." && name != ".." && destination.findFile(name) == null) {
-                        val target = destination.createFile("application/octet-stream", name)
-                        if (target != null) {
-                            try {
-                                context.contentResolver.openOutputStream(target.uri).use { output ->
-                                    requireNotNull(output) { "Не удалось создать файл: $name" }
-                                    val buffer = ByteArray(8192)
-                                    while (true) {
-                                        val count = seven.read(buffer)
-                                        if (count < 0) break
-                                        totalBytes += count
-                                        if (totalBytes > 256L * 1024L * 1024L) throw IOException("Превышен лимит распаковки 256 МБ")
-                                        output.write(buffer, 0, count)
-                                    }
+                val path = safeArchiveEntryPath(entry.name ?: "")
+                if (path != null) {
+                    val target = createArchiveTarget(destination, path, entry.isDirectory)
+                    if (!entry.isDirectory && target != null) {
+                        try {
+                            context.contentResolver.openOutputStream(target.uri).use { output ->
+                                requireNotNull(output) { "Не удалось создать файл: ${path.last()}" }
+                                val buffer = ByteArray(8192)
+                                while (true) {
+                                    val count = seven.read(buffer)
+                                    if (count < 0) break
+                                    totalBytes += count
+                                    if (totalBytes > 256L * 1024L * 1024L) throw IOException("Превышен лимит распаковки 256 МБ")
+                                    output.write(buffer, 0, count)
                                 }
-                                extracted++
-                            } catch (error: Exception) {
-                                target.delete()
-                                throw error
                             }
+                            extracted++
+                        } catch (error: Exception) {
+                            target.delete()
+                            throw error
                         }
                     }
                 }
@@ -253,23 +290,21 @@ internal fun extractRarArchive(context: Context, archiveFile: DocumentFile, dest
             while (header != null) {
                 processed++
                 if (processed > 1000) throw IOException("В архиве больше 1000 элементов")
-                if (!header.isDirectory) {
-                    val name = safeArchiveEntryName(header.fileName ?: "")
-                    if (name.isNotBlank() && name != "." && name != ".." && destination.findFile(name) == null) {
-                        val target = destination.createFile("application/octet-stream", name)
-                        if (target != null) {
-                            try {
-                                context.contentResolver.openOutputStream(target.uri).use { output ->
-                                    requireNotNull(output) { "Не удалось создать файл: $name" }
-                                    val bounded = LimitedOutputStream(output, 256L * 1024L * 1024L - totalBytes)
-                                    rar.extractFile(header, bounded)
-                                    totalBytes += bounded.bytesWritten
-                                }
-                                extracted++
-                            } catch (error: Exception) {
-                                target.delete()
-                                throw error
+                val path = safeArchiveEntryPath(header.fileName ?: "")
+                if (path != null) {
+                    val target = createArchiveTarget(destination, path, header.isDirectory)
+                    if (!header.isDirectory && target != null) {
+                        try {
+                            context.contentResolver.openOutputStream(target.uri).use { output ->
+                                requireNotNull(output) { "Не удалось создать файл: ${path.last()}" }
+                                val bounded = LimitedOutputStream(output, 256L * 1024L * 1024L - totalBytes)
+                                rar.extractFile(header, bounded)
+                                totalBytes += bounded.bytesWritten
                             }
+                            extracted++
+                        } catch (error: Exception) {
+                            target.delete()
+                            throw error
                         }
                     }
                 }
@@ -293,25 +328,23 @@ internal fun extractZipArchive(context: Context, archive: DocumentFile, destinat
         var extracted = 0
         var totalBytes = 0L
         headers.forEach { header ->
-            if (!header.isDirectory) {
-                val safeName = safeArchiveEntryName(header.fileName)
-                if (safeName.isNotBlank() && safeName != "." && safeName != ".." && destination.findFile(safeName) == null) {
-                    val target = destination.createFile("application/octet-stream", safeName)
-                    if (target != null) {
-                        try {
-                            zip.getInputStream(header).use { input ->
-                                context.contentResolver.openOutputStream(target.uri).use { output ->
-                                    requireNotNull(output) { "Не удалось создать файл: $safeName" }
-                                    val bounded = LimitedOutputStream(output, 256L * 1024L * 1024L - totalBytes)
-                                    input.copyTo(bounded)
-                                    totalBytes += bounded.bytesWritten
-                                }
+            val path = safeArchiveEntryPath(header.fileName)
+            if (path != null) {
+                val target = createArchiveTarget(destination, path, header.isDirectory)
+                if (!header.isDirectory && target != null) {
+                    try {
+                        zip.getInputStream(header).use { input ->
+                            context.contentResolver.openOutputStream(target.uri).use { output ->
+                                requireNotNull(output) { "Не удалось создать файл: ${path.last()}" }
+                                val bounded = LimitedOutputStream(output, 256L * 1024L * 1024L - totalBytes)
+                                input.copyTo(bounded)
+                                totalBytes += bounded.bytesWritten
                             }
-                            extracted++
-                        } catch (error: Exception) {
-                            target.delete()
-                            throw error
                         }
+                        extracted++
+                    } catch (error: Exception) {
+                        target.delete()
+                        throw error
                     }
                 }
             }
