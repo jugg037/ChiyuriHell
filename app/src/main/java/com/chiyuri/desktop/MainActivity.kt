@@ -2,6 +2,7 @@ package com.chiyuri.desktop
 
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import java.io.File
@@ -365,8 +366,9 @@ private fun DesktopScreen() {
                             Text("Сведения об устройстве", color = Muted, fontSize = 12.sp)
                             Text("Модель: ${Build.MANUFACTURER} ${Build.MODEL}", color = MainText, fontSize = 11.sp)
                             Text("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})", color = MainText, fontSize = 11.sp)
-                            Text("Оперативная память: ${availableMemory(context)} свободно", color = MainText, fontSize = 11.sp)
-                            Text("Батарея: ${batteryPercent(context)}%", color = MainText, fontSize = 11.sp)
+                            Text("Оперативная память: ${memoryUsage(context)}", color = MainText, fontSize = 11.sp)
+                            Text("Свободно: ${availableMemory(context)}", color = Muted, fontSize = 10.sp)
+                            Text("Батарея: ${batteryPercent(context)}% · ${batteryState(context)}", color = MainText, fontSize = 11.sp)
                             Text("Раздел данных: ${storageSummary()}", color = MainText, fontSize = 11.sp)
                             Text("Сеть: ${if (networkAvailable(context)) "подключена" else "нет подключения"}", color = MainText, fontSize = 11.sp)
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
@@ -999,6 +1001,23 @@ private fun storageSummary(): String {
     val total = stats.blockCountLong * stats.blockSizeLong
     val free = stats.availableBlocksLong * stats.blockSizeLong
     return String.format(Locale.getDefault(), "%.1f / %.1f ГБ свободно", free / (1024.0 * 1024.0 * 1024.0), total / (1024.0 * 1024.0 * 1024.0))
+}
+
+private fun batteryState(context: Context): String {
+    val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+    return when (batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1)) {
+        BatteryManager.BATTERY_STATUS_CHARGING -> "заряжается"
+        BatteryManager.BATTERY_STATUS_FULL -> "заряжена"
+        else -> "от батареи"
+    }
+}
+
+private fun memoryUsage(context: Context): String {
+    val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    val info = ActivityManager.MemoryInfo()
+    manager.getMemoryInfo(info)
+    val used = (info.totalMem - info.availMem).coerceAtLeast(0L)
+    return String.format(Locale.getDefault(), "%.1f / %.1f ГБ занято", used / (1024.0 * 1024.0 * 1024.0), info.totalMem / (1024.0 * 1024.0 * 1024.0))
 }
 
 private fun availableMemory(context: Context): String {
