@@ -384,7 +384,7 @@ private fun DesktopScreen() {
                 }
                 if (settingsOpen) {
                     Surface(modifier = if (settingsMinimized) Modifier.size(0.dp) else Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Оформление Chiyuri", color = MainText, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable { activePanel = "settings" })
                                 TextButton(onClick = { settingsMinimized = true }) { Text("—", color = LocalAccent.current) }
@@ -460,7 +460,6 @@ private fun DesktopScreen() {
                             }
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = LocalAccent.current) }
-                            Spacer(Modifier.weight(1f))
                             TextButton(onClick = { settingsOpen = false; settingsMinimized = false }) { Text("Закрыть", color = LocalAccent.current) }
                         }
                     }
