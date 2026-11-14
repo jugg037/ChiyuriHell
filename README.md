@@ -23,7 +23,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Desktop, Start menu, app search and Android app launching
 - [x] Persistent taskbar app pinning and unpinning
 - [ ] Taskbar polish, active-app indication and app switching
-- [ ] Desktop shortcuts and shortcut management
+- [x] Desktop shortcuts and shortcut management
 - [ ] File explorer entry point and core navigation
 - [ ] Wallpaper selection, scaling and theme customization
 - [ ] Reliable status indicators and orientation/layout polish
