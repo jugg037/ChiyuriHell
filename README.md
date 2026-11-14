@@ -44,7 +44,8 @@ The project is developed in `main` in feature stages. **No public release is pla
   - [x] Usage Access-based recent-app list and Alt+Tab switching (package history, not Android task-stack control)
   - [x] Launcher-local recent launch history (last 8 apps)
   - [x] Last-launched app marker on the taskbar (not a claim of current foreground state)
-- [x] Launcher multi-workspace and built-in window-like panels; external windows remain Android/Samsung-limited
+- [x] Three persistent workspaces with independently managed shortcuts and customizable workspace names
+- [x] Built-in window-like panels; external windows remain Android/Samsung-limited
   - [x] File explorer and appearance panels can remain open together with focus highlighting
   - [x] Adjustable built-in panel width, minimized/restored from the taskbar
   - [x] Taskbar shortcuts can reopen/focus the built-in panels
