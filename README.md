@@ -22,7 +22,9 @@ The project is developed in `main` in feature stages. **No public release is pla
 ### Stage 0.1 — Desktop shell
 - [x] Desktop, Start menu, app search and Android app launching
 - [x] Persistent taskbar app pinning and unpinning
-- [ ] Taskbar polish, active-app indication and app switching
+- [ ] Taskbar polish and true foreground-app indication (Android background/foreground restrictions apply)
+  - [x] Recent launch history and last-launched marker
+  - [x] Adjacent/split-screen launch request for apps on supported Android/Samsung configurations
 - [x] Desktop shortcuts and shortcut management
 - [x] File explorer entry point and folder navigation via Android Storage Access Framework
 - [ ] Wallpaper selection, scaling and theme customization
@@ -43,7 +45,8 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Browse a user-selected shared-storage folder using Android's Storage Access Framework
 - [x] Open supported files with installed Android apps; create folders and delete files
 - [x] Basic file operations: create folders, rename and delete entries using granted SAF permissions
-- [ ] Copy/move files and advanced permission/error recovery
+- [x] Copy/move files in the selected folder using SAF
+- [ ] Advanced permission/error recovery and folder copy/move
 - [ ] Archive browsing and extraction for RAR and 7Z where compatible libraries and licenses permit
 - [x] ZIP extraction with entry-count and expanded-size limits
 - [ ] Error handling for inaccessible, protected and unsupported files
@@ -52,6 +55,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Basic device dashboard (model, Android version, available RAM, battery)
 - [ ] Live resource and battery monitoring using public Android APIs
 - [ ] Launcher behavior, appearance and interaction settings
+  - [x] Persisted background presets, custom wallpaper image and fit/fill/stretch options
 - [ ] Optional controls only where Android permissions and Samsung firmware allow them
 
 ### Stage 0.6 — Privileged features (conditional)
