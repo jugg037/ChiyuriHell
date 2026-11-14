@@ -426,10 +426,10 @@ private fun DesktopScreen() {
                             }
                             Text("Ширина оконных панелей: ${effectivePanelWidth.toInt()} dp", color = Muted, fontSize = 12.sp)
                             Slider(
-                                value = panelWidth,
+                                value = effectivePanelWidth,
                                 onValueChange = { panelWidth = it },
                                 onValueChangeFinished = { saveDesktopIntPreference(context, "panel_width", panelWidth.toInt()) },
-                                valueRange = 260f..420f,
+                                valueRange = if (isWideLayout) 260f..420f else 245f..300f,
                                 steps = 7
                             )
                             Text("Размер плиток приложений: ${appTileSize.toInt()} dp", color = Muted, fontSize = 12.sp)
