@@ -880,7 +880,7 @@ private fun extractRarArchive(context: Context, archiveFile: DocumentFile, desti
                 processed++
                 if (processed > 1000) throw IOException("В архиве больше 1000 элементов")
                 if (!header.isDirectory) {
-                    val name = safeArchiveEntryName(header.fileNameString ?: "")
+                    val name = safeArchiveEntryName(header.fileName ?: "")
                     if (name.isNotBlank() && name != "." && name != ".." && destination.findFile(name) == null) {
                         val target = destination.createFile("application/octet-stream", name)
                         if (target != null) {
