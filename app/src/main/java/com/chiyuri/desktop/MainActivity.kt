@@ -395,6 +395,10 @@ private fun DesktopScreen() {
                 Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Text("▤", color = if (filesOpen && activePanel == "files") Crimson else MainText, fontSize = 20.sp,
+                    modifier = Modifier.clickable { filesOpen = true; activePanel = "files" }.padding(horizontal = 9.dp, vertical = 8.dp))
+                Text("⚙", color = if (settingsOpen && activePanel == "settings") Crimson else MainText, fontSize = 18.sp,
+                    modifier = Modifier.clickable { settingsOpen = true; activePanel = "settings" }.padding(horizontal = 9.dp, vertical = 8.dp))
                 pinnedApps.forEach { app ->
                     Box(
                         Modifier.size(42.dp).background(if (app.packageName == lastLaunchedPackage) Color(0xFF35101A) else Color.Transparent, RoundedCornerShape(9.dp)).combinedClickable(
