@@ -13,7 +13,11 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.os.Process
 import android.app.ActivityManager
+import android.app.AppOpsManager
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
@@ -136,6 +140,9 @@ private fun DesktopScreen() {
     var accentStyle by remember { mutableIntStateOf(loadAccentStyle(context)) }
     var rootStatus by remember { mutableStateOf("Не проверено") }
     var rootChecking by remember { mutableStateOf(false) }
+    var usageAccessGranted by remember { mutableStateOf(hasUsageAccess(context)) }
+    var activePackage by remember { mutableStateOf<String?>(null) }
+    var usageSince by remember { mutableLongStateOf(System.currentTimeMillis() - 24L * 60L * 60L * 1000L) }
     val uiScope = rememberCoroutineScope()
     var wallpaperScale by remember { mutableIntStateOf(loadWallpaperScale(context)) }
     val focusRequester = remember { FocusRequester() }
@@ -166,6 +173,27 @@ private fun DesktopScreen() {
             clock = nowTime()
             date = nowDate()
             delay(1000)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        var previousPermission = usageAccessGranted
+        while (true) {
+            val granted = hasUsageAccess(context)
+            if (granted && !previousPermission) {
+                usageSince = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
+                activePackage = null
+            }
+            usageAccessGranted = granted
+            if (granted) {
+                val snapshot = queryForegroundPackage(context, usageSince, activePackage)
+                activePackage = snapshot.first
+                usageSince = snapshot.second
+            } else {
+                activePackage = null
+            }
+            previousPermission = granted
+            delay(2500)
         }
     }
 
@@ -425,6 +453,11 @@ private fun DesktopScreen() {
                                     }
                                 }
                             }) { Text(if (rootChecking) "Проверка…" else "Проверить root-доступ", color = LocalAccent.current) }
+                            Text("Активное приложение", color = Muted, fontSize = 12.sp)
+                            Text(if (usageAccessGranted) "Usage Access разрешён" else "Usage Access не предоставлен", color = MainText, fontSize = 11.sp)
+                            TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
+                                Text("Настроить отслеживание", color = LocalAccent.current)
+                            }
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = LocalAccent.current) }
                             Spacer(Modifier.weight(1f))
@@ -556,7 +589,7 @@ private fun DesktopScreen() {
                     }.padding(horizontal = 9.dp, vertical = 8.dp))
                 pinnedApps.forEach { app ->
                     Box(
-                        Modifier.size(42.dp).background(if (app.packageName == lastLaunchedPackage) Color(0xFF35101A) else Color.Transparent, RoundedCornerShape(9.dp)).combinedClickable(
+                        Modifier.size(42.dp).background(if (app.packageName == (if (usageAccessGranted) activePackage else lastLaunchedPackage)) Color(0xFF35101A) else Color.Transparent, RoundedCornerShape(9.dp)).combinedClickable(
                             onClick = { openApp(app) },
                             onLongClick = { togglePin(app) }
                         ),
@@ -1304,6 +1337,42 @@ private fun launchAppAdjacent(context: Context, app: LaunchApp) {
         context.startActivity(intent)
     }.onFailure {
         Toast.makeText(context, "Не удалось открыть рядом. Попробуй сначала включить разделённый экран Android.", Toast.LENGTH_LONG).show()
+    }
+}
+
+private fun hasUsageAccess(context: Context): Boolean {
+    val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+    return appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName) == AppOpsManager.MODE_ALLOWED
+}
+
+private fun queryForegroundPackage(
+    context: Context,
+    beginTime: Long,
+    previousPackage: String?
+): Pair<String?, Long> {
+    val now = System.currentTimeMillis()
+    return runCatching {
+        val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val events = manager.queryEvents(beginTime, now + 1)
+        val event = UsageEvents.Event()
+        var foreground = previousPackage
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                when (event.eventType) {
+                    UsageEvents.Event.ACTIVITY_RESUMED -> foreground = event.packageName
+                    UsageEvents.Event.ACTIVITY_PAUSED -> if (foreground == event.packageName) foreground = null
+                }
+            } else {
+                when (event.eventType) {
+                    UsageEvents.Event.MOVE_TO_FOREGROUND -> foreground = event.packageName
+                    UsageEvents.Event.MOVE_TO_BACKGROUND -> if (foreground == event.packageName) foreground = null
+                }
+            }
+        }
+        foreground to now
+    }.getOrDefault(previousPackage to now).let { snapshot ->
+        (snapshot.first?.takeIf { it != context.packageName }) to snapshot.second
     }
 }
 
