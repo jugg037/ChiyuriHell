@@ -71,7 +71,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] RAR1.4 multi-volume, ZIP strong encryption and broader codec compatibility
   - [x] RAR4 .rar/.r00/.r01 and RAR5 .partN.rar multi-volume sets when all parts are available
   - [x] Password-protected ZIP extraction (AES and traditional ZIP encryption)
-  - Extracted archive paths are flattened into the selected folder; see THIRD_PARTY_NOTICES.md for format and resource limits
+  - [x] Archive extraction preserves safe relative folder structure and rejects traversal paths; see THIRD_PARTY_NOTICES.md for limits
 - [x] Error handling for inaccessible, protected and unsupported files (provider-specific edge cases remain subject to testing)
 
 ### Stage 0.5 — System tools and advanced settings
