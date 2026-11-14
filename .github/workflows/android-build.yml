@@ -40,6 +40,9 @@ jobs:
             exit 1
           fi
 
+      - name: Run Android lint and unit tests
+        run: gradle --no-daemon :app:lintDebug :app:testDebugUnitTest
+
       - name: Build installable debug APK
         run: gradle --no-daemon :app:assembleDebug
 
