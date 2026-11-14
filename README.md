@@ -81,9 +81,9 @@ The project is developed in `main` in feature stages. **No public release is pla
 
 ### Stage 0.6 — Privileged features (conditional)
 - [x] Manual root-access check; no `su` command runs until the user explicitly taps the check button
-- [ ] Evaluate root-only capabilities separately
-- [ ] Implement only if explicitly supported, safely detectable and optional
-- [ ] Keep the launcher fully usable without root
+- [x] Evaluate root-only capabilities separately; no root requirement is justified for the launcher core
+- [ ] Implement optional root-only controls only if a concrete supported use case is approved
+- [x] Keep the launcher fully usable without root
 
 ### Explicit exclusions
 - Windows OS emulation, EXE/Wine and the previously discussed Winlator stage are excluded.
