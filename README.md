@@ -96,6 +96,10 @@ The project is developed in `main` in feature stages. **No public release is pla
 - Third-party archive-library licenses and restrictions are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/`.
 - A feature that Android or the target Samsung firmware cannot safely provide must be documented as a platform limitation, not falsely marked complete.
 
+## Release status
+
+No public release is being published during feature development. Pushes to `main` may produce temporary CI debug artifacts for build verification; they are not releases. A stable signed APK and GitHub Release will be created only after the applicable roadmap items and [FINAL_AUDIT.md](FINAL_AUDIT.md) checks pass.
+
 ## Build
 GitHub Actions builds a debug APK on pushes to `main` and manual workflow dispatch.
 Artifact: `ChiyuriDesktop-debug`.
