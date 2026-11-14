@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.os.Process
+import android.os.SystemClock
 import android.app.ActivityManager
 import android.app.AppOpsManager
 import android.app.usage.UsageEvents
@@ -131,6 +132,7 @@ private fun DesktopScreen() {
     var search by remember { mutableStateOf("") }
     var clock by remember { mutableStateOf(nowTime()) }
     var date by remember { mutableStateOf(nowDate()) }
+    var processCpuPercent by remember { mutableIntStateOf(0) }
     var filesOpen by remember { mutableStateOf(false) }
     var filesMinimized by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
@@ -173,6 +175,20 @@ private fun DesktopScreen() {
             clock = nowTime()
             date = nowDate()
             delay(1000)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        var previousCpu = Process.getElapsedCpuTime()
+        var previousWall = SystemClock.elapsedRealtime()
+        while (true) {
+            delay(2000)
+            val currentCpu = Process.getElapsedCpuTime()
+            val currentWall = SystemClock.elapsedRealtime()
+            val wallDelta = currentWall - previousWall
+            processCpuPercent = if (wallDelta > 0) (((currentCpu - previousCpu) * 100L) / wallDelta).toInt().coerceIn(0, 100) else 0
+            previousCpu = currentCpu
+            previousWall = currentWall
         }
     }
 
@@ -436,6 +452,7 @@ private fun DesktopScreen() {
                             Text("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})", color = MainText, fontSize = 11.sp)
                             Text("Оперативная память: ${memoryUsage(context)}", color = MainText, fontSize = 11.sp)
                             Text("Свободно: ${availableMemory(context)}", color = Muted, fontSize = 10.sp)
+                            Text("Chiyuri: CPU ${processCpuPercent}% · RAM ${appMemoryPss(context)}", color = MainText, fontSize = 11.sp)
                             Text("Батарея: ${batteryPercent(context)}% · ${batteryState(context)}", color = MainText, fontSize = 11.sp)
                             Text("Раздел данных: ${storageSummary()}", color = MainText, fontSize = 11.sp)
                             Text("Сеть: ${if (networkAvailable(context)) "подключена" else "нет подключения"}", color = MainText, fontSize = 11.sp)
@@ -1246,6 +1263,12 @@ private fun batteryState(context: Context): String {
         BatteryManager.BATTERY_STATUS_FULL -> "заряжена"
         else -> "от батареи"
     }
+}
+
+private fun appMemoryPss(context: Context): String {
+    val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    val memory = manager.getProcessMemoryInfo(intArrayOf(Process.myPid())).firstOrNull()
+    return "${memory?.totalPss?.div(1024) ?: 0} МБ"
 }
 
 private fun memoryUsage(context: Context): String {
