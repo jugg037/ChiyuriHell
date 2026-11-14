@@ -154,8 +154,7 @@ private fun copyRarSetToTemp(context: Context, archiveFile: DocumentFile): Pair<
             else -> return copySingleRarToTemp(context, archiveFile)
         }
         val firstVolume = siblings.firstOrNull { it.name.equals("$baseName.rar", ignoreCase = true) }
-            ?: if (selectedOldPart == null) archiveFile.takeIf { name.endsWith(".rar", true) }
-            else null
+            ?: (if (selectedOldPart == null) archiveFile.takeIf { name.endsWith(".rar", true) } else null)
             ?: throw IOException("Не найден первый том $baseName.rar")
         val oldParts = siblings.mapNotNull { item ->
             val match = oldPattern.matchEntire(item.name ?: "") ?: return@mapNotNull null
