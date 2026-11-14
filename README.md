@@ -41,8 +41,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Multi-window workspace and window-like app panels where Android/Samsung APIs permit
   - [x] File explorer and appearance panels can remain open together with focus highlighting
   - [x] Taskbar shortcuts can reopen/focus the built-in panels
-- [ ] Window focus, minimize/restore and close behavior for supported in-app panels
-  - [x] Focus highlighting and close controls for built-in panels
+- [x] Window focus, minimize/restore and close behavior for supported in-app panels
 - [ ] Tablet-oriented split layouts and keyboard/mouse interaction
   - [x] Keyboard shortcuts: Ctrl+Space (Start), Ctrl+Alt+F (Files), Ctrl+Alt+S (Settings), Ctrl+1/2/3 (workspaces), Alt+Tab (recent launcher apps)
 - [ ] Clearly report Android/firmware limitations rather than simulate unsupported OS-level window control
@@ -60,11 +59,12 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Error handling for inaccessible, protected and unsupported files
 
 ### Stage 0.5 — System tools and advanced settings
-- [x] Basic device dashboard (model, Android version, available RAM, battery)
+- [x] Basic device dashboard (model, Android version, available RAM, battery, storage and network)
 - [ ] Live resource and battery monitoring using public Android APIs
   - [x] Live battery state, available/used RAM, data-partition storage and network state
 - [ ] Launcher behavior, appearance and interaction settings
   - [x] Persisted background presets, custom wallpaper image and fit/fill/stretch options
+  - [x] Three persistent accent-color choices
 - [ ] Optional controls only where Android permissions and Samsung firmware allow them
 
 ### Stage 0.6 — Privileged features (conditional)
