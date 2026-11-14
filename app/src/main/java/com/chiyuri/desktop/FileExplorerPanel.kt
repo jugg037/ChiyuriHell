@@ -281,10 +281,17 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     }
 }
 
-private fun deleteDocumentEntry(entry: DocumentFile): Boolean {
+private data class DeleteBudget(var entries: Int = 0)
+
+private fun deleteDocumentEntry(entry: DocumentFile): Boolean = deleteDocumentEntry(entry, DeleteBudget(), 0)
+
+private fun deleteDocumentEntry(entry: DocumentFile, budget: DeleteBudget, depth: Int): Boolean {
+    budget.entries++
+    if (budget.entries > 1000) throw IOException("Удаление ограничено 1000 элементами")
+    if (depth > 64) throw IOException("Слишком глубокая структура папок")
     if (entry.isDirectory) {
         entry.listFiles().forEach { child ->
-            if (!deleteDocumentEntry(child)) throw IOException("Не удалось удалить ${child.name ?: "элемент"}")
+            if (!deleteDocumentEntry(child, budget, depth + 1)) throw IOException("Не удалось удалить ${child.name ?: "элемент"}")
         }
     }
     return entry.delete()
@@ -297,10 +304,12 @@ private fun copyDocumentEntry(
     source: DocumentFile,
     destination: DocumentFile,
     budget: CopyBudget,
-    created: MutableList<DocumentFile>
+    created: MutableList<DocumentFile>,
+    depth: Int = 0
 ): DocumentFile {
     budget.entries++
     if (budget.entries > 1000) throw IOException("В операции больше 1000 элементов")
+    if (depth > 64) throw IOException("Слишком глубокая структура папок")
     val name = source.name?.takeIf { it.isNotBlank() } ?: "Без имени"
     if (destination.findFile(name) != null) throw IOException("Элемент с именем $name уже существует")
     if (source.isDirectory) {
@@ -308,7 +317,7 @@ private fun copyDocumentEntry(
             ?: throw IOException("Не удалось создать папку $name")
         created += targetDirectory
         source.listFiles().forEach { child ->
-            copyDocumentEntry(context, child, targetDirectory, budget, created)
+            copyDocumentEntry(context, child, targetDirectory, budget, created, depth + 1)
         }
         return targetDirectory
     }
