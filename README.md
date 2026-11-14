@@ -80,7 +80,7 @@ The project is developed in `main` in feature stages. **No public release is pla
   - [x] Adjustable app drawer tile density
   - [x] Shortcut to Android's default Home app settings
   - [x] Optional Usage Access setting for taskbar foreground highlighting
-- [ ] Optional controls only where Android permissions and Samsung firmware allow them
+- [x] Optional shortcuts to Android Wi-Fi, Bluetooth, display, sound, battery and location settings; actual controls remain under Android
 
 ### Stage 0.6 — Privileged features (conditional)
 - [x] Manual root-access check; no `su` command runs until the user explicitly taps the check button
