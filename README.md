@@ -64,7 +64,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] ZIP, RAR and 7Z extraction with entry-count and expanded-size limits
 - [x] Optional archive password field; memory caps for 7Z and RAR extraction
 - [x] Archive preview/listing before extraction
-- [ ] Legacy RAR1.4 .r00-style multipart, ZIP strong encryption and broader codec compatibility
+- [ ] Legacy .r00-style multipart, ZIP strong encryption and broader codec compatibility
   - [x] RAR5 .partN.rar multi-volume sets when all parts are available
   - [x] Password-protected ZIP extraction (AES and traditional ZIP encryption)
   - Extracted archive paths are flattened into the selected folder; see THIRD_PARTY_NOTICES.md for format and resource limits
