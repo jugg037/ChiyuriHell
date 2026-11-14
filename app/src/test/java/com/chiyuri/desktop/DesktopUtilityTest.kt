@@ -82,6 +82,14 @@ class DesktopUtilityTest {
     }
 
     @Test
+    fun dualPanelWidthLeavesRoomForDesktopContent() {
+        assertEquals(330f, maxDualPanelWidth(1024))
+        assertEquals(368f, maxDualPanelWidth(1100))
+        assertEquals(420f, maxDualPanelWidth(1280))
+        assertEquals(420f, maxDualPanelWidth(1600))
+    }
+
+    @Test
     fun dualPanelLayoutRequiresEnoughHorizontalSpace() {
         assertEquals(false, isWideDesktop(700))
         assertEquals(false, isWideDesktop(1023))
