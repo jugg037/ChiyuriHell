@@ -101,7 +101,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 
 ## Release status
 
-No public release is being published during feature development. Pushes to `main` may produce temporary CI debug artifacts for build verification; they are not releases. A stable signed APK and GitHub Release will be created only after the applicable roadmap items and [FINAL_AUDIT.md](FINAL_AUDIT.md) checks pass. Release notes will be curated to list user-visible changes only, without CI/signing/test boilerplate.
+No public release is being published during feature development. Pushes to `main` may produce temporary CI debug artifacts for build verification; they are not releases. A stable signed APK and GitHub Release will be created only after the applicable roadmap items and [FINAL_AUDIT.md](FINAL_AUDIT.md) checks pass. Release notes will be curated to list user-visible changes only, without CI/signing/test boilerplate. The tag workflow rejects publication while either the roadmap or final audit contains unchecked items.
 
 ## Build
 GitHub Actions builds a debug APK on pushes to `main` and manual workflow dispatch.
