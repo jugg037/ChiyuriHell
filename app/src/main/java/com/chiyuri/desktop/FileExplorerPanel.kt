@@ -41,7 +41,8 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     var fileSearch by remember { mutableStateOf("") }
     var sortMode by remember { mutableStateOf(prefs.getString("file_sort_mode", "name") ?: "name") }
     var archivePassword by remember { mutableStateOf("") }
-    var isArchiveBusy by remember { mutableStateOf(false) }
+    var isBusy by remember { mutableStateOf(false) }
+    var busyLabel by remember { mutableStateOf("Обработка…") }
     var archivePreview by remember { mutableStateOf<String?>(null) }
     var deleteTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
@@ -95,7 +96,8 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     fun previewArchive(entry: DocumentFile, format: String) {
         if (isArchiveBusy) return
         isArchiveBusy = true
-        message = "Чтение состава $format…"
+        busyLabel = "Чтение состава $format…"
+        message = busyLabel
         scope.launch(Dispatchers.IO) {
             val result = runCatching { listArchiveEntries(context, entry, format, archivePassword) }
             withContext(Dispatchers.Main) {
@@ -112,7 +114,8 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     fun startArchiveExtraction(entry: DocumentFile, format: String) {
         if (isArchiveBusy) return
         isArchiveBusy = true
-        message = "Распаковка $format…"
+        busyLabel = "Распаковка $format…"
+        message = busyLabel
         scope.launch(Dispatchers.IO) {
             val result = runCatching {
                 when (format) {
@@ -140,7 +143,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         Text(message, color = Muted, fontSize = 11.sp)
         if (isArchiveBusy) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text("Архив обрабатывается. Не закрывай проводник.", color = Muted, fontSize = 9.sp)
+            Text("$busyLabel Не закрывай проводник.", color = Muted, fontSize = 9.sp)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Сортировка:", color = Muted, fontSize = 10.sp)
@@ -230,7 +233,9 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                     val destination = current
                     if (source != null && destination != null) {
                         val moving = clipboardMove
-                        message = if (moving) "Перенос элемента…" else "Копирование элемента…"
+                        busyLabel = if (moving) "Перенос элемента…" else "Копирование элемента…"
+                        message = busyLabel
+                        isBusy = true
                         scope.launch(Dispatchers.IO) {
                             val result = runCatching {
                                 if (moving && !source.canWrite()) throw IOException("Нет разрешения на удаление исходного элемента")
@@ -239,6 +244,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                                 copied
                             }
                             withContext(Dispatchers.Main) {
+                                isBusy = false
                                 message = result.fold({ if (it) "Элемент ${if (moving) "перенесён" else "скопирован"}" else "Элемент с таким именем уже существует" }, { "Операция не выполнена: ${it.localizedMessage}" })
                                 if (result.getOrDefault(false)) {
                                     refreshKey++
@@ -262,9 +268,13 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                 confirmButton = {
                     TextButton(onClick = {
                         if (target != null) {
+                            busyLabel = "Удаление элемента…"
+                            message = busyLabel
+                            isBusy = true
                             scope.launch(Dispatchers.IO) {
                                 val result = runCatching { deleteDocumentEntry(target) }
                                 withContext(Dispatchers.Main) {
+                                    isBusy = false
                                     message = result.fold({ if (it) "Элемент удалён" else "Не удалось удалить элемент" }, { "Ошибка удаления: ${it.localizedMessage}" })
                                     if (result.getOrDefault(false)) refreshKey++
                                     deleteTarget = null
