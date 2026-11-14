@@ -583,7 +583,7 @@ private fun DesktopScreen() {
                 modifier = Modifier.size(42.dp).clickable { startOpen = !startOpen }
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text("C", color = LocalAccent.current, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text("CP", color = LocalAccent.current, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = (-1).sp)
                 }
             }
             Spacer(Modifier.width(8.dp))
@@ -591,16 +591,18 @@ private fun DesktopScreen() {
                 Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("▤", color = if (filesOpen && !filesMinimized && activePanel == "files") LocalAccent.current else MainText, fontSize = 20.sp,
-                    modifier = Modifier.clickable {
+                Icon(Icons.Filled.FolderOpen, contentDescription = "Проводник",
+                    tint = if (filesOpen && !filesMinimized && activePanel == "files") LocalAccent.current else MainText,
+                    modifier = Modifier.size(38.dp).clickable {
                         if (filesOpen && !filesMinimized && activePanel == "files") filesMinimized = true
                         else { filesOpen = true; filesMinimized = false; if (!isWideLayout) settingsOpen = false; activePanel = "files" }
-                    }.padding(horizontal = 9.dp, vertical = 8.dp))
-                Text("⚙", color = if (settingsOpen && !settingsMinimized && activePanel == "settings") LocalAccent.current else MainText, fontSize = 18.sp,
-                    modifier = Modifier.clickable {
+                    }.padding(9.dp))
+                Icon(Icons.Filled.Palette, contentDescription = "Оформление",
+                    tint = if (settingsOpen && !settingsMinimized && activePanel == "settings") LocalAccent.current else MainText,
+                    modifier = Modifier.size(38.dp).clickable {
                         if (settingsOpen && !settingsMinimized && activePanel == "settings") settingsMinimized = true
                         else { settingsOpen = true; settingsMinimized = false; if (!isWideLayout) filesOpen = false; activePanel = "settings" }
-                    }.padding(horizontal = 9.dp, vertical = 8.dp))
+                    }.padding(9.dp))
                 pinnedApps.forEach { app ->
                     Box(
                         Modifier.size(42.dp).background(if (app.packageName == (if (usageAccessGranted) activePackage else lastLaunchedPackage)) Color(0xFF35101A) else Color.Transparent, RoundedCornerShape(9.dp)).combinedClickable(
