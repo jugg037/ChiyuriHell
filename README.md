@@ -72,6 +72,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Launcher behavior, appearance and interaction settings
   - [x] Persisted background presets, custom wallpaper image and fit/fill/stretch options
   - [x] Three persistent accent-color choices
+  - [x] Configurable battery percentage and taskbar date visibility
   - [x] Optional Usage Access setting for taskbar foreground highlighting
 - [ ] Optional controls only where Android permissions and Samsung firmware allow them
 
