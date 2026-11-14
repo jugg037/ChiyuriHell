@@ -481,6 +481,8 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
     var refreshKey by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
+    var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
+    var renameValue by remember { mutableStateOf("") }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             runCatching {
@@ -537,6 +539,10 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
                             Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
                         }
                         if (!entry.isDirectory) {
+                            TextButton(onClick = {
+                                renameTarget = entry
+                                renameValue = entry.name ?: ""
+                            }) { Text("Имя", color = Muted, fontSize = 10.sp) }
                             if (entry.name?.endsWith(".zip", ignoreCase = true) == true) {
                                 TextButton(onClick = {
                                     message = "Распаковка ZIP…"
@@ -564,6 +570,25 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
             message = if (created) "Папка создана" else "Не удалось создать папку"
             if (created) refreshKey++
         }) { Text("＋ Новая папка", color = Crimson) }
+        if (renameTarget != null) {
+            AlertDialog(
+                onDismissRequest = { renameTarget = null },
+                title = { Text("Переименовать") },
+                text = {
+                    OutlinedTextField(value = renameValue, onValueChange = { renameValue = it }, singleLine = true, label = { Text("Новое имя") })
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val target = renameTarget
+                        val renamed = target != null && renameValue.isNotBlank() && runCatching { target.renameTo(renameValue.trim()) }.getOrDefault(false)
+                        message = if (renamed) "Имя изменено" else "Не удалось переименовать"
+                        if (renamed) refreshKey++
+                        renameTarget = null
+                    }) { Text("Сохранить", color = Crimson) }
+                },
+                dismissButton = { TextButton(onClick = { renameTarget = null }) { Text("Отмена") } }
+            )
+        }
     }
 }
 
