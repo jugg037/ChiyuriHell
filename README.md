@@ -27,11 +27,13 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] File explorer entry point and folder navigation via Android Storage Access Framework
 - [ ] Wallpaper selection, scaling and theme customization
   - [x] Custom image wallpaper and three built-in dark/crimson background presets
-  - [ ] Wallpaper scaling modes (fit/fill/tile)
+  - [x] Wallpaper scaling modes (fill/fit/stretch)
 - [ ] Reliable status indicators and orientation/layout polish
 
 ### Stage 0.2 — Multitasking
-- [ ] Recent-app/task switching integrated into the desktop shell
+- [ ] System recent-task switching (restricted by Android)
+  - [x] Launcher-local recent launch history (last 8 apps)
+  - [x] Last-launched app marker on the taskbar (not a claim of current foreground state)
 - [ ] Multi-window workspace and window-like app panels where Android/Samsung APIs permit
 - [ ] Window focus, minimize/restore and close behavior for supported in-app panels
 - [ ] Tablet-oriented split layouts and keyboard/mouse interaction
@@ -45,8 +47,8 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Error handling for inaccessible, protected and unsupported files
 
 ### Stage 0.5 — System tools and advanced settings
-- [ ] Device/system information dashboard
-- [ ] Resource and battery monitoring using public Android APIs
+- [x] Basic device dashboard (model, Android version, available RAM, battery)
+- [ ] Live resource and battery monitoring using public Android APIs
 - [ ] Launcher behavior, appearance and interaction settings
 - [ ] Optional controls only where Android permissions and Samsung firmware allow them
 
