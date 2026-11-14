@@ -150,8 +150,6 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                                 renameTarget = entry
                                 renameValue = entry.name ?: ""
                             }) { Text("Имя", color = Muted, fontSize = 10.sp) }
-                        if (!entry.isDirectory) {
-                        }
                         TextButton(onClick = { clipboardFile = entry; clipboardMove = false; message = "Элемент добавлен в буфер копирования" }) {
                             Text("Копия", color = Muted, fontSize = 9.sp)
                         }
@@ -296,6 +294,11 @@ private fun copyDocumentEntry(
 private fun copyDocumentEntry(context: Context, source: DocumentFile, destination: DocumentFile): Boolean {
     if (destination.findFile(source.name ?: "Без имени") != null) return false
     if (source.isDirectory) {
+        var ancestor: DocumentFile? = destination
+        while (ancestor != null) {
+            if (ancestor.uri == source.uri) throw IOException("Нельзя копировать папку внутрь самой себя")
+            ancestor = ancestor.parentFile
+        }
         val sourceId = runCatching { DocumentsContract.getDocumentId(source.uri) }.getOrNull()
         val destinationId = runCatching { DocumentsContract.getDocumentId(destination.uri) }.getOrNull()
         if (sourceId != null && destinationId != null &&
