@@ -56,7 +56,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Basic file operations: create folders, rename files/folders and confirm recursive deletion using granted SAF permissions
 - [x] Copy/move files and folders recursively using SAF, with 1,000-entry, 64-level and 512 MiB limits
 - [x] Confirmed recursive folder deletion with entry/depth limits
-- [ ] Advanced permission/error recovery
+- [x] Advanced permission/error recovery for common SAF provider failures
   - [x] Detect expired SAF folder grants and request folder selection again
   - [x] Detect read-only folders and disable write operations
 - [x] ZIP, RAR and 7Z extraction with entry-count and expanded-size limits
@@ -64,7 +64,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Archive preview/listing before extraction
 - [ ] Multi-volume RAR, ZIP encryption and broader codec compatibility
   - Extracted archive paths are flattened into the selected folder; see THIRD_PARTY_NOTICES.md for format and resource limits
-- [ ] Error handling for inaccessible, protected and unsupported files
+- [x] Error handling for inaccessible, protected and unsupported files (provider-specific edge cases remain subject to testing)
 
 ### Stage 0.5 — System tools and advanced settings
 - [x] Basic device dashboard (model, Android version, available RAM, battery, storage and network)
