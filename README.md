@@ -37,6 +37,8 @@ The project is developed in `main` in feature stages. **No public release is pla
   - [x] Launcher-local recent launch history (last 8 apps)
   - [x] Last-launched app marker on the taskbar (not a claim of current foreground state)
 - [ ] Multi-window workspace and window-like app panels where Android/Samsung APIs permit
+  - [x] File explorer and appearance panels can remain open together with focus highlighting
+  - [x] Taskbar shortcuts can reopen/focus the built-in panels
 - [ ] Window focus, minimize/restore and close behavior for supported in-app panels
 - [ ] Tablet-oriented split layouts and keyboard/mouse interaction
 - [ ] Clearly report Android/firmware limitations rather than simulate unsupported OS-level window control
