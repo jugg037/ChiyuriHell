@@ -84,7 +84,7 @@ import java.util.Locale
 private val Night = Color(0xFF09090B)
 private val Panel = Color(0xEE17171C)
 private val PanelSoft = Color(0xCC24242B)
-private val DefaultLocalAccent.current = Color(0xFFD7193F)
+private val DefaultCrimson = Color(0xFFD7193F)
 private val LocalAccent = staticCompositionLocalOf { DefaultCrimson }
 private val MainText = Color(0xFFF4F1F2)
 private val Muted = Color(0xFFAAA4A8)
