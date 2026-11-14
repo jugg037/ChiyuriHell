@@ -24,7 +24,7 @@ Do not create RELEASE_READY or push a version tag until every applicable check b
 - [ ] Test wallpaper presets, custom image, fit/crop/stretch, accent colors and preference persistence
 - [ ] Test file access with read/write and read-only SAF providers
 - [ ] Test folder creation, rename, file/folder copy and move, recursive delete and failure recovery
-- [ ] Test ZIP, RAR and 7Z listing and extraction, including password-protected ZIP/RAR/7Z, wrong passwords, duplicate names and resource limits
+- [ ] Test ZIP, RAR and 7Z listing and extraction, including password-protected ZIP/RAR/7Z, RAR5 multipart sets, wrong passwords, duplicate names and resource limits
 - [ ] Test Android system settings shortcuts for Wi-Fi, Bluetooth, display, sound, battery and location
 - [ ] Test battery, charging, network, RAM, storage and Chiyuri process metrics
 - [ ] Test root check without root and, if a rooted device is available, verify that it remains opt-in
