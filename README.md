@@ -102,7 +102,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 
 ## Current development gate
 
-The applicable feature roadmap is implemented. The remaining roadmap item is final portrait/landscape validation on the target SM-P619; automated lint/tests, APK verification and the full release audit are still required before publication.
+The applicable feature roadmap is implemented. GitHub Actions run #301 on `main` passed Android lint and unit tests, built the installable debug APK, verified its package metadata and uploaded the APK with a SHA-256 checksum. The remaining release gates are target-device validation on the SM-P619, stable release signing and the remaining publication checks in [FINAL_AUDIT.md](FINAL_AUDIT.md).
 
 ## Release status
 
