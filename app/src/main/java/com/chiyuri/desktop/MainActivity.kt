@@ -130,6 +130,7 @@ private fun DesktopScreen() {
     var accentStyle by remember { mutableIntStateOf(loadAccentStyle(context)) }
     var showBatteryPercent by remember { mutableStateOf(loadDesktopPreference(context, "show_battery_percent", true)) }
     var showTaskbarDate by remember { mutableStateOf(loadDesktopPreference(context, "show_taskbar_date", true)) }
+    var appTileSize by remember { mutableFloatStateOf(loadDesktopIntPreference(context, "app_tile_size", 76).toFloat()) }
     var rootStatus by remember { mutableStateOf("Не проверено") }
     var rootChecking by remember { mutableStateOf(false) }
     var usageAccessGranted by remember { mutableStateOf(hasUsageAccess(context)) }
@@ -418,6 +419,14 @@ private fun DesktopScreen() {
                                 })
                                 Text("Дата в панели задач", color = MainText, fontSize = 11.sp)
                             }
+                            Text("Размер плиток приложений: ${appTileSize.toInt()} dp", color = Muted, fontSize = 12.sp)
+                            Slider(
+                                value = appTileSize,
+                                onValueChange = { appTileSize = it },
+                                onValueChangeFinished = { saveDesktopIntPreference(context, "app_tile_size", appTileSize.toInt()) },
+                                valueRange = 64f..112f,
+                                steps = 4
+                            )
                             Text("Акцентный цвет", color = Muted, fontSize = 12.sp)
                             listOf("Кровавый", "Бордовый", "Алый").forEachIndexed { index, label ->
                                 Row(Modifier.fillMaxWidth().clickable {
@@ -554,7 +563,7 @@ private fun DesktopScreen() {
                                 }
                             } else {
                                 LazyVerticalGrid(
-                                    columns = GridCells.Adaptive(minSize = 76.dp),
+                                    columns = GridCells.Adaptive(minSize = appTileSize.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     modifier = Modifier.weight(1f)
@@ -722,6 +731,20 @@ private fun loadWallpaperScale(context: Context): Int =
 
 private fun saveWallpaperScale(context: Context, scale: Int) {
     context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putInt("wallpaper_scale", scale.coerceIn(0, 2)).apply()
+}
+
+private fun loadDesktopPreference(context: Context, key: String, default: Boolean): Boolean =
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getBoolean(key, default)
+
+private fun saveDesktopPreference(context: Context, key: String, value: Boolean) {
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putBoolean(key, value).apply()
+}
+
+private fun loadDesktopIntPreference(context: Context, key: String, default: Int): Int =
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt(key, default)
+
+private fun saveDesktopIntPreference(context: Context, key: String, value: Int) {
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putInt(key, value).apply()
 }
 
 private fun loadAccentStyle(context: Context): Int = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("accent_style", 0).coerceIn(0, 2)
