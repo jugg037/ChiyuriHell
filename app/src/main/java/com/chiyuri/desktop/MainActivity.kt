@@ -529,6 +529,19 @@ private fun DesktopScreen() {
                                 runCatching { context.startActivity(homeSettings) }
                                     .onFailure { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
                             }) { Text("Выбрать лаунчер по умолчанию", color = LocalAccent.current) }
+                            Text("Системные разделы", color = Muted, fontSize = 12.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(onClick = { openSystemSettings(context, android.provider.Settings.ACTION_WIFI_SETTINGS) }) { Text("Wi-Fi", color = LocalAccent.current, fontSize = 10.sp) }
+                                TextButton(onClick = { openSystemSettings(context, android.provider.Settings.ACTION_BLUETOOTH_SETTINGS) }) { Text("Bluetooth", color = LocalAccent.current, fontSize = 10.sp) }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(onClick = { openSystemSettings(context, android.provider.Settings.ACTION_DISPLAY_SETTINGS) }) { Text("Экран", color = LocalAccent.current, fontSize = 10.sp) }
+                                TextButton(onClick = { openSystemSettings(context, android.provider.Settings.ACTION_SOUND_SETTINGS) }) { Text("Звук", color = LocalAccent.current, fontSize = 10.sp) }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(onClick = { openSystemSettings(context, android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS) }) { Text("Батарея", color = LocalAccent.current, fontSize = 10.sp) }
+                                TextButton(onClick = { openSystemSettings(context, android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS) }) { Text("Местоположение", color = LocalAccent.current, fontSize = 10.sp) }
+                            }
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = LocalAccent.current) }
                             TextButton(onClick = { settingsOpen = false; settingsMinimized = false }) { Text("Закрыть", color = LocalAccent.current) }
                         }
@@ -799,6 +812,11 @@ private fun loadDesktopPreference(context: Context, key: String, default: Boolea
 
 private fun saveDesktopPreference(context: Context, key: String, value: Boolean) {
     context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putBoolean(key, value).apply()
+}
+
+private fun openSystemSettings(context: Context, action: String) {
+    runCatching { context.startActivity(Intent(action)) }
+        .onFailure { runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) } }
 }
 
 private fun loadDesktopIntPreference(context: Context, key: String, default: Int): Int =
