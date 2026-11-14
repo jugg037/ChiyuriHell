@@ -15,7 +15,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.items as lazyListItems
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -24,7 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -98,6 +98,7 @@ private fun DesktopScreen() {
     var filesOpen by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
     var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
+    var wallpaperScale by remember { mutableIntStateOf(loadWallpaperScale(context)) }
     var recentPackages by remember { mutableStateOf(loadRecentPackages(context)) }
     var lastLaunchedPackage by remember { mutableStateOf(loadLastLaunched(context)) }
     var wallpaperUri by remember { mutableStateOf(loadWallpaperUri(context)) }
@@ -153,7 +154,7 @@ private fun DesktopScreen() {
 
     Box(Modifier.fillMaxSize().background(Night)) {
         if (wallpaperBitmap != null) {
-            Image(bitmap = wallpaperBitmap!!, contentDescription = "Обои рабочего стола", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Image(bitmap = wallpaperBitmap!!, contentDescription = "Обои рабочего стола", modifier = Modifier.fillMaxSize(), contentScale = when (wallpaperScale) { 1 -> ContentScale.Fit; 2 -> ContentScale.FillBounds; else -> ContentScale.Crop })
         } else {
             Box(Modifier.fillMaxSize().background(wallpaperBrush(wallpaperStyle)))
         }
@@ -232,6 +233,19 @@ private fun DesktopScreen() {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Оформление Chiyuri", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                             Text("Фон рабочего стола", color = Muted, fontSize = 12.sp)
+                            Text("Масштаб изображения", color = Muted, fontSize = 12.sp)
+                            listOf("Заполнить", "Вписать", "Растянуть").forEachIndexed { index, label ->
+                                Row(Modifier.fillMaxWidth().clickable {
+                                    wallpaperScale = index
+                                    saveWallpaperScale(context, index)
+                                }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(selected = wallpaperScale == index, onClick = {
+                                        wallpaperScale = index
+                                        saveWallpaperScale(context, index)
+                                    }, colors = RadioButtonDefaults.colors(selectedColor = Crimson))
+                                    Text(label, color = MainText, fontSize = 12.sp)
+                                }
+                            }
                             OutlinedButton(onClick = { wallpaperPicker.launch(arrayOf("image/*")) }) { Text("Выбрать изображение") }
                             if (wallpaperUri != null) TextButton(onClick = {
                                 wallpaperUri = null
@@ -323,7 +337,7 @@ private fun DesktopScreen() {
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    items(visibleApps, key = { it.packageName }) { app ->
+                                    gridItems(visibleApps, key = { it.packageName }) { app ->
                                         AppTile(
                                             app = app,
                                             pinned = app.packageName in pinnedPackages,
@@ -499,7 +513,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
             }
         } else {
             androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                items(entries, key = { it.uri.toString() }) { entry ->
+                lazyListItems(entries, key = { it.uri.toString() }) { entry ->
                     Row(
                         Modifier.fillMaxWidth().background(PanelSoft, RoundedCornerShape(9.dp)).clickable {
                             if (entry.isDirectory) folderStack = folderStack + entry
@@ -539,6 +553,13 @@ private fun readableSize(bytes: Long): String = when {
     bytes < 1024 -> "${bytes} Б"
     bytes < 1024 * 1024 -> "${bytes / 1024} КБ"
     else -> String.format(Locale.getDefault(), "%.1f МБ", bytes / (1024f * 1024f))
+}
+
+private fun loadWallpaperScale(context: Context): Int =
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("wallpaper_scale", 0).coerceIn(0, 2)
+
+private fun saveWallpaperScale(context: Context, scale: Int) {
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putInt("wallpaper_scale", scale.coerceIn(0, 2)).apply()
 }
 
 private fun loadWallpaperUri(context: Context): String? =
