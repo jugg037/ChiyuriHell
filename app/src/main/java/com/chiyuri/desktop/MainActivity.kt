@@ -17,6 +17,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.items as lazyListItems
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -102,6 +103,7 @@ private fun DesktopScreen() {
     var date by remember { mutableStateOf(nowDate()) }
     var filesOpen by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
+    var activePanel by remember { mutableStateOf("files") }
     var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
     var wallpaperScale by remember { mutableIntStateOf(loadWallpaperScale(context)) }
     var recentPackages by remember { mutableStateOf(loadRecentPackages(context)) }
@@ -224,8 +226,8 @@ private fun DesktopScreen() {
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             DesktopShortcut("Приложения", Icons.Filled.Apps) { startOpen = true }
-                            DesktopShortcut("Файлы", Icons.Filled.Apps) { filesOpen = true; startOpen = false; settingsOpen = false }
-                            DesktopShortcut("Оформление", Icons.Filled.Settings) { settingsOpen = true; filesOpen = false; startOpen = false }
+                            DesktopShortcut("Файлы", Icons.Filled.Apps) { filesOpen = true; activePanel = "files"; startOpen = false }
+                            DesktopShortcut("Оформление", Icons.Filled.Settings) { settingsOpen = true; activePanel = "settings"; startOpen = false }
                         }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -235,14 +237,14 @@ private fun DesktopScreen() {
                 }
 
                 if (filesOpen) {
-                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 380.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), tonalElevation = 8.dp) {
-                        FileExplorerPanel(context = context, onClose = { filesOpen = false })
+                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 380.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "files") Crimson else Color(0xFF343038)), tonalElevation = 8.dp) {
+                        FileExplorerPanel(context = context, onClose = { filesOpen = false }, onFocus = { activePanel = "files" })
                     }
                 }
                 if (settingsOpen) {
-                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), tonalElevation = 8.dp) {
+                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") Crimson else Color(0xFF343038)), tonalElevation = 8.dp) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("Оформление Chiyuri", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text("Оформление Chiyuri", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { activePanel = "settings" })
                             Text("Фон рабочего стола", color = Muted, fontSize = 12.sp)
                             Text("Масштаб изображения", color = Muted, fontSize = 12.sp)
                             listOf("Заполнить", "Вписать", "Растянуть").forEachIndexed { index, label ->
@@ -483,7 +485,7 @@ private fun DesktopAppShortcut(app: LaunchApp, onClick: () -> Unit, onLongClick:
 }
 
 @Composable
-private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
+private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: () -> Unit) {
     val prefs = remember { context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE) }
     var root by remember {
         mutableStateOf(prefs.getString("file_tree_uri", null)?.let { saved ->
@@ -517,7 +519,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
 
     Column(Modifier.fillMaxSize().padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Проводник", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text("Проводник", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable(onClick = onFocus))
             TextButton(onClick = onClose) { Text("Закрыть", color = Crimson) }
         }
         Text(message, color = Muted, fontSize = 11.sp)
