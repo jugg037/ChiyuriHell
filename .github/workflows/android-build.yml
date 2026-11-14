@@ -140,9 +140,10 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs "$APK"
           BADGING="$("$AAPT" dump badging "$APK")"
           echo "$BADGING" | grep -F "package: name='com.chiyuri.desktop'" >/dev/null
-          EXPECTED_NAME="$(sed -n 's/.*versionName = "\\([^"]*\\)".*/\\1/p' app/build.gradle.kts | head -n 1)"
-          EXPECTED_CODE="$(sed -n 's/.*versionCode = \\([0-9][0-9]*\\).*/\\1/p' app/build.gradle.kts | head -n 1)"
-          echo "$BADGING" | grep -F "versionCode='$EXPECTED_CODE' versionName='$EXPECTED_NAME'" >/dev/null
+          EXPECTED_NAME="$(grep -oE 'versionName = "[^"]+"' app/build.gradle.kts | head -n 1 | cut -d '"' -f 2)"
+          EXPECTED_CODE="$(grep -oE 'versionCode = [0-9]+' app/build.gradle.kts | head -n 1 | grep -oE '[0-9]+')"
+          echo "$BADGING" | grep -F "versionCode='$EXPECTED_CODE'" >/dev/null
+          echo "$BADGING" | grep -F "versionName='$EXPECTED_NAME'" >/dev/null
           mkdir -p release-test
           cp "$APK" "release-test/ChiyuriDesktop-release-test-${GITHUB_RUN_NUMBER}.apk"
           cd release-test
