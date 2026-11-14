@@ -29,6 +29,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -612,6 +613,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
     var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
     var fileSearch by remember { mutableStateOf("") }
     var archivePassword by remember { mutableStateOf("") }
+    var archivePreview by remember { mutableStateOf<String?>(null) }
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameValue by remember { mutableStateOf("") }
     var clipboardFile by remember { mutableStateOf<DocumentFile?>(null) }
@@ -633,6 +635,20 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
             .getOrElse { emptyList() }
     }
     val visibleEntries = entries.filter { it.name?.contains(fileSearch, ignoreCase = true) == true }
+
+    fun previewArchive(entry: DocumentFile, format: String) {
+        message = "Чтение состава $format…"
+        scope.launch(Dispatchers.IO) {
+            val result = runCatching { listArchiveEntries(context, entry, format, archivePassword) }
+            withContext(Dispatchers.Main) {
+                archivePreview = result.fold(
+                    { names -> if (names.isEmpty()) "Архив пуст" else names.joinToString("\n") },
+                    { "Не удалось прочитать архив: ${it.localizedMessage}" }
+                )
+                message = "Состав архива готов"
+            }
+        }
+    }
 
     fun startArchiveExtraction(entry: DocumentFile, format: String) {
         message = "Распаковка $format…"
@@ -704,12 +720,18 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                                 Text("Вырезать", color = Muted, fontSize = 9.sp)
                             }
                             when {
-                                entry.name?.endsWith(".zip", ignoreCase = true) == true ->
+                                entry.name?.endsWith(".zip", ignoreCase = true) == true -> {
+                                    TextButton(onClick = { previewArchive(entry, "ZIP") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
                                     TextButton(onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = LocalAccent.current, fontSize = 10.sp) }
-                                entry.name?.endsWith(".7z", ignoreCase = true) == true ->
+                                }
+                                entry.name?.endsWith(".7z", ignoreCase = true) == true -> {
+                                    TextButton(onClick = { previewArchive(entry, "7Z") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
                                     TextButton(onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = LocalAccent.current, fontSize = 10.sp) }
-                                entry.name?.endsWith(".rar", ignoreCase = true) == true ->
+                                }
+                                entry.name?.endsWith(".rar", ignoreCase = true) == true -> {
+                                    TextButton(onClick = { previewArchive(entry, "RAR") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
                                     TextButton(onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = LocalAccent.current, fontSize = 10.sp) }
+                                }
                             }
                             TextButton(onClick = {
                                 val deleted = runCatching { entry.delete() }.getOrDefault(false)
@@ -752,6 +774,21 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                 }) { Text("Вставить", color = LocalAccent.current) }
             }
         }
+        if (archivePreview != null) {
+            AlertDialog(
+                onDismissRequest = { archivePreview = null },
+                title = { Text("Содержимое архива") },
+                text = {
+                    Text(
+                        archivePreview.orEmpty(),
+                        color = MainText,
+                        fontSize = 11.sp,
+                        modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())
+                    )
+                },
+                confirmButton = { TextButton(onClick = { archivePreview = null }) { Text("Готово", color = LocalAccent.current) } }
+            )
+        }
         if (renameTarget != null) {
             AlertDialog(
                 onDismissRequest = { renameTarget = null },
@@ -793,6 +830,70 @@ private fun copyDocumentFile(context: Context, source: DocumentFile, destination
         throw error
     }
     return true
+}
+
+private fun listArchiveEntries(context: Context, archive: DocumentFile, format: String, password: String): List<String> {
+    val names = mutableListOf<String>()
+    when (format) {
+        "ZIP" -> {
+            context.contentResolver.openInputStream(archive.uri).use { input ->
+                requireNotNull(input) { "Не удалось прочитать ZIP-архив" }
+                ZipInputStream(input).use { zip ->
+                    var entry = zip.nextEntry
+                    while (entry != null && names.size < 1000) {
+                        names += (if (entry.isDirectory) "📁 " else "📄 ") + entry.name
+                        zip.closeEntry()
+                        entry = zip.nextEntry
+                    }
+                }
+            }
+        }
+        "7Z" -> {
+            val tempFile = File.createTempFile("chiyuri-list-", ".7z", context.cacheDir)
+            try {
+                context.contentResolver.openInputStream(archive.uri).use { input ->
+                    requireNotNull(input) { "Не удалось прочитать 7Z-архив" }
+                    tempFile.outputStream().use { output ->
+                        val buffer = ByteArray(8192)
+                        var total = 0L
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            total += count
+                            if (total > 512L * 1024L * 1024L) throw IOException("Архив больше 512 МБ")
+                            output.write(buffer, 0, count)
+                        }
+                    }
+                }
+                SevenZFile.builder().setFile(tempFile).setMaxMemoryLimitKiB(64 * 1024).apply {
+                    if (password.isNotEmpty()) setPassword(password.toCharArray())
+                }.get().use { seven ->
+                    var entry = seven.nextEntry
+                    while (entry != null && names.size < 1000) {
+                        names += (if (entry.isDirectory) "📁 " else "📄 ") + (entry.name ?: "Без имени")
+                        entry = seven.nextEntry
+                    }
+                }
+            } finally {
+                tempFile.delete()
+            }
+        }
+        else -> {
+            context.contentResolver.openInputStream(archive.uri).use { input ->
+                requireNotNull(input) { "Не удалось прочитать RAR-архив" }
+                val options = ArchiveOptions.builder().maxDictionarySize(128L * 1024L * 1024L).apply {
+                    if (password.isNotEmpty()) password(password.toCharArray())
+                }.build()
+                Archive(input, options).use { rar ->
+                    rar.getFileHeaders().take(1000).forEach { header ->
+                        names += (if (header.isDirectory) "📁 " else "📄 ") + (header.fileName ?: "Без имени")
+                    }
+                }
+            }
+        }
+    }
+    if (names.size == 1000) names += "… список ограничен первыми 1000 элементами"
+    return names
 }
 
 private class LimitedOutputStream(
