@@ -248,6 +248,7 @@ private fun DesktopScreen() {
         if (launchApp(context, app)) {
             lastLaunchedPackage = app.packageName
             recentPackages = recordRecentApp(context, app.packageName)
+            if (usageAccessGranted) systemRecentPackages = (listOf(app.packageName) + systemRecentPackages.filter { it != app.packageName }).take(12)
         }
     }
 
@@ -255,6 +256,7 @@ private fun DesktopScreen() {
         if (launchAppAdjacent(context, app)) {
             lastLaunchedPackage = app.packageName
             recentPackages = recordRecentApp(context, app.packageName)
+            if (usageAccessGranted) systemRecentPackages = (listOf(app.packageName) + systemRecentPackages.filter { it != app.packageName }).take(12)
         }
     }
 
