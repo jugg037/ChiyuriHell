@@ -41,11 +41,11 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] System recent-task switching (restricted by Android)
   - [x] Launcher-local recent launch history (last 8 apps)
   - [x] Last-launched app marker on the taskbar (not a claim of current foreground state)
-- [ ] Multi-window workspace and window-like app panels where Android/Samsung APIs permit
+- [x] Launcher multi-workspace and built-in window-like panels; external windows remain Android/Samsung-limited
   - [x] File explorer and appearance panels can remain open together with focus highlighting
   - [x] Taskbar shortcuts can reopen/focus the built-in panels
 - [x] Window focus, minimize/restore and close behavior for supported in-app panels
-- [ ] Tablet-oriented split layouts and keyboard/mouse interaction
+- [x] Tablet-oriented split layouts and keyboard/pointer interaction
   - [x] Keyboard shortcuts: Ctrl+Space (Start), Ctrl+Alt+F (Files), Ctrl+Alt+S (Settings), Ctrl+1/2/3 (workspaces), Alt+Tab (recent launcher apps)
 - [x] Clearly report Android/firmware limitations rather than simulate unsupported OS-level window control
 
@@ -70,7 +70,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Basic live resource and battery monitoring using public Android APIs
   - [x] Live battery state, available/used RAM, data-partition storage and network state
   - [x] Chiyuri process CPU and PSS memory metrics
-- [ ] Launcher behavior, appearance and interaction settings
+- [x] Launcher behavior, appearance and interaction settings
   - [x] Persisted background presets, custom wallpaper image and fit/fill/stretch options
   - [x] Three persistent accent-color choices
   - [x] Configurable battery percentage and taskbar date visibility
