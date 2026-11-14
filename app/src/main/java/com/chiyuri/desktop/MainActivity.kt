@@ -3,6 +3,8 @@ package com.chiyuri.desktop
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.net.Uri
 import android.graphics.drawable.Drawable
 import android.os.BatteryManager
@@ -12,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -36,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -91,6 +97,21 @@ private fun DesktopScreen() {
     var filesOpen by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
     var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
+    var wallpaperUri by remember { mutableStateOf(loadWallpaperUri(context)) }
+    val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) runCatching {
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            wallpaperUri = uri.toString()
+            context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putString("wallpaper_uri", uri.toString()).apply()
+        }
+    }
+    val wallpaperBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, wallpaperUri) {
+        value = withContext(Dispatchers.IO) {
+            wallpaperUri?.let { saved -> runCatching {
+                context.contentResolver.openInputStream(Uri.parse(saved))?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+            }.getOrNull() }
+        }
+    }
 
     LaunchedEffect(startOpen) {
         if (startOpen) apps = loadApps(context)
@@ -122,11 +143,11 @@ private fun DesktopScreen() {
     }
 
     Box(Modifier.fillMaxSize().background(Night)) {
-        Box(
-            Modifier.fillMaxSize().background(
-                wallpaperBrush(wallpaperStyle)
-            )
-        )
+        if (wallpaperBitmap != null) {
+            Image(bitmap = wallpaperBitmap!!, contentDescription = "Обои рабочего стола", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        } else {
+            Box(Modifier.fillMaxSize().background(wallpaperBrush(wallpaperStyle)))
+        }
         Box(
             Modifier.align(Alignment.TopStart).padding(start = 28.dp, top = 26.dp)
                 .width(3.dp).height(92.dp).background(Crimson, RoundedCornerShape(4.dp))
@@ -202,6 +223,11 @@ private fun DesktopScreen() {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Оформление Chiyuri", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                             Text("Фон рабочего стола", color = Muted, fontSize = 12.sp)
+                            OutlinedButton(onClick = { wallpaperPicker.launch(arrayOf("image/*")) }) { Text("Выбрать изображение") }
+                            if (wallpaperUri != null) TextButton(onClick = {
+                                wallpaperUri = null
+                                context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().remove("wallpaper_uri").apply()
+                            }) { Text("Убрать изображение", color = Crimson) }
                             listOf("Кровавый градиент", "Чёрный", "Багровое свечение").forEachIndexed { index, label ->
                                 Row(Modifier.fillMaxWidth().background(if (wallpaperStyle == index) Color(0xFF35101A) else PanelSoft, RoundedCornerShape(10.dp)).clickable {
                                     wallpaperStyle = index
@@ -485,6 +511,9 @@ private fun readableSize(bytes: Long): String = when {
     bytes < 1024 * 1024 -> "${bytes / 1024} КБ"
     else -> String.format(Locale.getDefault(), "%.1f МБ", bytes / (1024f * 1024f))
 }
+
+private fun loadWallpaperUri(context: Context): String? =
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getString("wallpaper_uri", null)
 
 private fun loadWallpaperStyle(context: Context): Int =
     context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("wallpaper_style", 0).coerceIn(0, 2)
