@@ -37,6 +37,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material3.*
@@ -230,8 +232,8 @@ private fun DesktopScreen() {
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             DesktopShortcut("Приложения", Icons.Filled.Apps) { startOpen = true }
-                            DesktopShortcut("Файлы", Icons.Filled.Apps) { filesOpen = true; if (!isWideLayout) settingsOpen = false; activePanel = "files"; startOpen = false }
-                            DesktopShortcut("Оформление", Icons.Filled.Settings) { settingsOpen = true; if (!isWideLayout) filesOpen = false; activePanel = "settings"; startOpen = false }
+                            DesktopShortcut("Файлы", Icons.Filled.FolderOpen) { filesOpen = true; if (!isWideLayout) settingsOpen = false; activePanel = "files"; startOpen = false }
+                            DesktopShortcut("Оформление", Icons.Filled.Palette) { settingsOpen = true; if (!isWideLayout) filesOpen = false; activePanel = "settings"; startOpen = false }
                         }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
