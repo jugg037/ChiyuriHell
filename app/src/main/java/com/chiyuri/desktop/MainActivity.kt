@@ -675,6 +675,10 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                             Text(entry.name ?: "Без названия", color = MainText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
                         }
+                            TextButton(onClick = {
+                                renameTarget = entry
+                                renameValue = entry.name ?: ""
+                            }) { Text("Имя", color = Muted, fontSize = 10.sp) }
                         if (!entry.isDirectory) {
                             TextButton(onClick = { clipboardFile = entry; clipboardMove = false; message = "Файл добавлен в буфер копирования" }) {
                                 Text("Копия", color = Muted, fontSize = 9.sp)
@@ -682,10 +686,6 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                             TextButton(onClick = { clipboardFile = entry; clipboardMove = true; message = "Файл готов к переносу" }) {
                                 Text("Вырезать", color = Muted, fontSize = 9.sp)
                             }
-                            TextButton(onClick = {
-                                renameTarget = entry
-                                renameValue = entry.name ?: ""
-                            }) { Text("Имя", color = Muted, fontSize = 10.sp) }
                             when {
                                 entry.name?.endsWith(".zip", ignoreCase = true) == true ->
                                     TextButton(onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = Crimson, fontSize = 10.sp) }
