@@ -14,6 +14,7 @@ import android.app.ActivityManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -816,13 +817,26 @@ private fun saveDesktopPackages(context: Context, packages: Set<String>) {
 }
 
 private fun launchApp(context: Context, app: LaunchApp) {
-    context.packageManager.getLaunchIntentForPackage(app.packageName)?.let(context::startActivity)
+    val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+    if (intent == null) {
+        Toast.makeText(context, "Приложение больше недоступно", Toast.LENGTH_SHORT).show()
+        return
+    }
+    runCatching { context.startActivity(intent) }
+        .onFailure { Toast.makeText(context, "Не удалось запустить приложение", Toast.LENGTH_SHORT).show() }
 }
 
 private fun launchAppAdjacent(context: Context, app: LaunchApp) {
-    context.packageManager.getLaunchIntentForPackage(app.packageName)?.let { intent ->
+    val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+    if (intent == null) {
+        Toast.makeText(context, "Приложение больше недоступно", Toast.LENGTH_SHORT).show()
+        return
+    }
+    runCatching {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
         context.startActivity(intent)
+    }.onFailure {
+        Toast.makeText(context, "Не удалось открыть рядом. Попробуй сначала включить разделённый экран Android.", Toast.LENGTH_LONG).show()
     }
 }
 
