@@ -8,6 +8,7 @@ Windows 10-inspired Android launcher with Chiyuri black/crimson styling.
 
 ## Implemented foundation
 - Windows-inspired desktop and bottom taskbar
+- Chiyuri CP adaptive launcher icon
 - Start menu with installed Android app list and search
 - Launch installed Android apps
 - Pin and unpin apps on the taskbar with long-press; pins persist after restart
