@@ -122,18 +122,72 @@ internal fun extractSevenZArchive(context: Context, archive: DocumentFile, desti
 }
 
 // Junrar is used for extraction only. Its UnRAR license prohibits using the code to develop a RAR-compatible archiver.
+private fun copyRarSetToTemp(context: Context, archiveFile: DocumentFile): Pair<File, File> {
+    val name = archiveFile.name ?: throw IOException("У RAR-архива отсутствует имя")
+    val partPattern = Regex("^(.*)\\.part(\\d+)\\.rar$", RegexOption.IGNORE_CASE)
+    val selectedPart = partPattern.matchEntire(name)
+    val volumes = if (selectedPart != null) {
+        val prefix = selectedPart.groupValues[1]
+        val parent = archiveFile.parentFile
+        val found = parent?.listFiles().orEmpty().mapNotNull { item ->
+            val match = partPattern.matchEntire(item.name ?: "") ?: return@mapNotNull null
+            if (!match.groupValues[1].equals(prefix, ignoreCase = true)) return@mapNotNull null
+            val number = match.groupValues[2].toIntOrNull() ?: return@mapNotNull null
+            number to item
+        }.sortedBy { it.first }
+        if (found.isEmpty() || found.first().first != 1 ||
+            found.map { it.first } != (1..found.last().first).toList()) {
+            throw IOException("Неполный набор томов RAR: нужны части начиная с part1")
+        }
+        found.map { it.second }
+    } else {
+        listOf(archiveFile)
+    }
+
+    if (volumes.size > 1000) throw IOException("В наборе RAR больше 1000 томов")
+    val tempDir = File(context.cacheDir, "chiyuri-rar-${System.nanoTime()}")
+    if (!tempDir.mkdirs()) throw IOException("Не удалось создать временную папку для RAR")
+    try {
+        var total = 0L
+        val copied = volumes.map { volume ->
+            val volumeName = volume.name?.substringAfterLast('/')?.substringAfterLast('\\')
+                ?: throw IOException("У тома RAR отсутствует имя")
+            val target = File(tempDir, volumeName)
+            context.contentResolver.openInputStream(volume.uri).use { input ->
+                requireNotNull(input) { "Не удалось прочитать том $volumeName" }
+                target.outputStream().use { output ->
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        if (total > 512L * 1024L * 1024L) throw IOException("Набор RAR больше 512 МБ")
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            target
+        }
+        val first = copied.firstOrNull { it.name.equals(name, ignoreCase = true) }
+            ?: copied.first()
+        return tempDir to first
+    } catch (error: Exception) {
+        tempDir.deleteRecursively()
+        throw error
+    }
+}
+
 internal fun extractRarArchive(context: Context, archiveFile: DocumentFile, destination: DocumentFile?, password: String): Int {
     require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
-    if (archiveFile.length() > 512L * 1024L * 1024L) throw IOException("Архив больше 512 МБ")
-    var extracted = 0
-    var processed = 0
-    var totalBytes = 0L
-    context.contentResolver.openInputStream(archiveFile.uri).use { input ->
-        requireNotNull(input) { "Не удалось прочитать RAR-архив" }
+    val (tempDir, firstVolume) = copyRarSetToTemp(context, archiveFile)
+    try {
+        var extracted = 0
+        var processed = 0
+        var totalBytes = 0L
         val options = ArchiveOptions.builder().maxDictionarySize(128L * 1024L * 1024L).apply {
             if (password.isNotEmpty()) password(password.toCharArray())
         }.build()
-        Archive(input, options).use { rar ->
+        Archive(firstVolume, options).use { rar ->
             var header = rar.nextFileHeader()
             while (header != null) {
                 processed++
@@ -161,8 +215,10 @@ internal fun extractRarArchive(context: Context, archiveFile: DocumentFile, dest
                 header = rar.nextFileHeader()
             }
         }
+        return extracted
+    } finally {
+        tempDir.deleteRecursively()
     }
-    return extracted
 }
 
 internal fun extractZipArchive(context: Context, archive: DocumentFile, destination: DocumentFile?, password: String): Int {
@@ -251,17 +307,18 @@ internal fun listArchiveEntries(context: Context, archive: DocumentFile, format:
             }
         }
         else -> {
-            if (archive.length() > 512L * 1024L * 1024L) throw IOException("Архив больше 512 МБ")
-            context.contentResolver.openInputStream(archive.uri).use { input ->
-                requireNotNull(input) { "Не удалось прочитать RAR-архив" }
+            val (tempDir, firstVolume) = copyRarSetToTemp(context, archive)
+            try {
                 val options = ArchiveOptions.builder().maxDictionarySize(128L * 1024L * 1024L).apply {
                     if (password.isNotEmpty()) password(password.toCharArray())
                 }.build()
-                Archive(input, options).use { rar ->
+                Archive(firstVolume, options).use { rar ->
                     rar.getFileHeaders().take(1000).forEach { header ->
                         names += (if (header.isDirectory) "📁 " else "📄 ") + (header.fileName ?: "Без имени")
                     }
                 }
+            } finally {
+                tempDir.deleteRecursively()
             }
         }
     }
