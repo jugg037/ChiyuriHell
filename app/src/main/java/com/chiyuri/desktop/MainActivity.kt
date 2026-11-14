@@ -23,6 +23,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -229,6 +230,14 @@ private fun DesktopScreen() {
     }
 
     val visibleApps = apps.filter { it.label.contains(search, ignoreCase = true) || it.packageName.contains(search, ignoreCase = true) }
+    BackHandler(enabled = startOpen || filesOpen || settingsOpen) {
+        when {
+            startOpen -> { startOpen = false; search = "" }
+            activePanel == "settings" && settingsOpen -> settingsOpen = false
+            filesOpen -> filesOpen = false
+            settingsOpen -> settingsOpen = false
+        }
+    }
     val recentPackageOrder = if (usageAccessGranted && systemRecentPackages.isNotEmpty()) systemRecentPackages else recentPackages
     val recentApps = recentPackageOrder.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }.take(8)
     val pinnedApps = pinnedPackages.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }
