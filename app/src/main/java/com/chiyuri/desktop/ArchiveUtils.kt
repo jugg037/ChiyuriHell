@@ -32,17 +32,6 @@ private class LimitedOutputStream(
     override fun flush() = target.flush()
 }
 
-internal fun reorderPinnedPackages(packages: List<String>, packageName: String, direction: Int): List<String> {
-    val from = packages.indexOf(packageName)
-    if (from < 0 || packages.isEmpty()) return packages
-    val to = (from + direction).coerceIn(0, packages.lastIndex)
-    if (from == to) return packages
-    return packages.toMutableList().apply {
-        val item = removeAt(from)
-        add(to, item)
-    }
-}
-
 internal fun safeArchiveEntryName(rawName: String): String =
     rawName.substringAfterLast('/').substringAfterLast('\\').trim()
 
@@ -196,4 +185,68 @@ internal fun extractZipArchive(context: Context, archive: DocumentFile, destinat
         }
     }
     return extracted
+}
+
+internal fun listArchiveEntries(context: Context, archive: DocumentFile, format: String, password: String): List<String> {
+    val names = mutableListOf<String>()
+    when (format) {
+        "ZIP" -> {
+            context.contentResolver.openInputStream(archive.uri).use { input ->
+                requireNotNull(input) { "Не удалось прочитать ZIP-архив" }
+                ZipInputStream(input).use { zip ->
+                    var entry = zip.nextEntry
+                    while (entry != null && names.size < 1000) {
+                        names += (if (entry.isDirectory) "📁 " else "📄 ") + entry.name
+                        zip.closeEntry()
+                        entry = zip.nextEntry
+                    }
+                }
+            }
+        }
+        "7Z" -> {
+            val tempFile = File.createTempFile("chiyuri-list-", ".7z", context.cacheDir)
+            try {
+                context.contentResolver.openInputStream(archive.uri).use { input ->
+                    requireNotNull(input) { "Не удалось прочитать 7Z-архив" }
+                    tempFile.outputStream().use { output ->
+                        val buffer = ByteArray(8192)
+                        var total = 0L
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            total += count
+                            if (total > 512L * 1024L * 1024L) throw IOException("Архив больше 512 МБ")
+                            output.write(buffer, 0, count)
+                        }
+                    }
+                }
+                SevenZFile.builder().setFile(tempFile).setMaxMemoryLimitKiB(64 * 1024).apply {
+                    if (password.isNotEmpty()) setPassword(password.toCharArray())
+                }.get().use { seven ->
+                    var entry = seven.nextEntry
+                    while (entry != null && names.size < 1000) {
+                        names += (if (entry.isDirectory) "📁 " else "📄 ") + (entry.name ?: "Без имени")
+                        entry = seven.nextEntry
+                    }
+                }
+            } finally {
+                tempFile.delete()
+            }
+        }
+        else -> {
+            context.contentResolver.openInputStream(archive.uri).use { input ->
+                requireNotNull(input) { "Не удалось прочитать RAR-архив" }
+                val options = ArchiveOptions.builder().maxDictionarySize(128L * 1024L * 1024L).apply {
+                    if (password.isNotEmpty()) password(password.toCharArray())
+                }.build()
+                Archive(input, options).use { rar ->
+                    rar.getFileHeaders().take(1000).forEach { header ->
+                        names += (if (header.isDirectory) "📁 " else "📄 ") + (header.fileName ?: "Без имени")
+                    }
+                }
+            }
+        }
+    }
+    if (names.size == 1000) names += "… список ограничен первыми 1000 элементами"
+    return names
 }
