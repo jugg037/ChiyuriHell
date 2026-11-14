@@ -364,7 +364,7 @@ private fun DesktopScreen() {
 
             Row(
                 Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(18.dp)
+                horizontalArrangement = Arrangement.Start
             ) {
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -412,11 +412,13 @@ private fun DesktopScreen() {
                     }
                 }
 
+                if (filesOpen && !filesMinimized) Spacer(Modifier.width(18.dp))
                 if (filesOpen) {
                     Surface(modifier = if (filesMinimized) Modifier.size(0.dp) else Modifier.width(effectivePanelWidth.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "files") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
                         FileExplorerPanel(context = context, onClose = { filesOpen = false; filesMinimized = false }, onMinimize = { filesMinimized = true }, onFocus = { activePanel = "files" })
                     }
                 }
+                if (settingsOpen && !settingsMinimized) Spacer(Modifier.width(18.dp))
                 if (settingsOpen) {
                     Surface(modifier = if (settingsMinimized) Modifier.size(0.dp) else Modifier.width(effectivePanelWidth.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
                         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
