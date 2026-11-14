@@ -27,6 +27,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Taskbar foreground-app indication (optional Usage Access permission)
   - [x] Optional real foreground detection after the user grants Usage Access
   - [x] Recent launch history and last-launched marker
+  - [x] Usage Access-based recent-app list in Start menu and Alt+Tab switching
   - [x] Adjacent/split-screen launch request for apps on supported Android/Samsung configurations
 - [x] Desktop shortcuts and shortcut management
 - [x] File explorer entry point and folder navigation via Android Storage Access Framework
