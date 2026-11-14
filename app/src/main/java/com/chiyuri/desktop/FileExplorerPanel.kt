@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +59,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     var newFolderName by remember { mutableStateOf("Новая папка") }
     var clipboardFile by remember { mutableStateOf<DocumentFile?>(null) }
     var clipboardMove by remember { mutableStateOf(false) }
+    var actionMenuFor by remember { mutableStateOf<Uri?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             root = DocumentFile.fromTreeUri(context, uri)
@@ -213,34 +215,75 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                             Text(entry.name ?: "Без названия", color = MainText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
                         }
-                            TextButton(enabled = !isBusy && current?.canWrite() == true, onClick = {
-                                renameTarget = entry
-                                renameValue = entry.name ?: ""
-                            }) { Text("Имя", color = Muted, fontSize = 10.sp) }
-                        TextButton(enabled = !isBusy, onClick = { clipboardFile = entry; clipboardMove = false; message = "Элемент добавлен в буфер копирования" }) {
-                            Text("Копия", color = Muted, fontSize = 9.sp)
-                        }
-                        TextButton(enabled = !isBusy, onClick = { clipboardFile = entry; clipboardMove = true; message = "Элемент готов к переносу" }) {
-                            Text("Вырезать", color = Muted, fontSize = 9.sp)
-                        }
-                        if (!entry.isDirectory) {
-                            when {
-                                entry.name?.endsWith(".zip", ignoreCase = true) == true -> {
-                                    TextButton(enabled = !isBusy, onClick = { previewArchive(entry, "ZIP") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(enabled = !isBusy && current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = LocalAccent.current, fontSize = 10.sp) }
-                                }
-                                entry.name?.endsWith(".7z", ignoreCase = true) == true -> {
-                                    TextButton(enabled = !isBusy, onClick = { previewArchive(entry, "7Z") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(enabled = !isBusy && current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = LocalAccent.current, fontSize = 10.sp) }
-                                }
-                                entry.name?.endsWith(".rar", ignoreCase = true) == true -> {
-                                    TextButton(enabled = !isBusy, onClick = { previewArchive(entry, "RAR") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(enabled = !isBusy && current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = LocalAccent.current, fontSize = 10.sp) }
-                                }
+                        Box {
+                            IconButton(enabled = !isBusy, onClick = { actionMenuFor = entry.uri }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = "Действия с элементом", tint = Muted)
                             }
-                        }
-                        TextButton(enabled = !isBusy && current?.canWrite() == true, onClick = { deleteTarget = entry }) {
-                            Text("Удалить", color = LocalAccent.current, fontSize = 10.sp)
+                            DropdownMenu(
+                                expanded = actionMenuFor == entry.uri,
+                                onDismissRequest = { actionMenuFor = null }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Переименовать") },
+                                    enabled = current?.canWrite() == true,
+                                    onClick = {
+                                        actionMenuFor = null
+                                        renameTarget = entry
+                                        renameValue = entry.name ?: ""
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Копировать") },
+                                    onClick = {
+                                        actionMenuFor = null
+                                        clipboardFile = entry
+                                        clipboardMove = false
+                                        message = "Элемент добавлен в буфер копирования"
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Вырезать") },
+                                    onClick = {
+                                        actionMenuFor = null
+                                        clipboardFile = entry
+                                        clipboardMove = true
+                                        message = "Элемент готов к переносу"
+                                    }
+                                )
+                                if (!entry.isDirectory) {
+                                    val archiveFormat = when {
+                                        entry.name?.endsWith(".zip", ignoreCase = true) == true -> "ZIP"
+                                        entry.name?.endsWith(".7z", ignoreCase = true) == true -> "7Z"
+                                        entry.name?.endsWith(".rar", ignoreCase = true) == true -> "RAR"
+                                        else -> null
+                                    }
+                                    if (archiveFormat != null) {
+                                        DropdownMenuItem(
+                                            text = { Text("Содержимое $archiveFormat") },
+                                            onClick = {
+                                                actionMenuFor = null
+                                                previewArchive(entry, archiveFormat)
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Распаковать $archiveFormat сюда") },
+                                            enabled = current?.canWrite() == true,
+                                            onClick = {
+                                                actionMenuFor = null
+                                                startArchiveExtraction(entry, archiveFormat)
+                                            }
+                                        )
+                                    }
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("Удалить", color = LocalAccent.current) },
+                                    enabled = current?.canWrite() == true,
+                                    onClick = {
+                                        actionMenuFor = null
+                                        deleteTarget = entry
+                                    }
+                                )
+                            }
                         }
                     }
                 }
