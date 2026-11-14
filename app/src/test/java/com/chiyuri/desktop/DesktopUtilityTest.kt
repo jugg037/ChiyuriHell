@@ -19,6 +19,19 @@ class DesktopUtilityTest {
     }
 
     @Test
+    fun pinnedAppsCanBeReorderedWithoutChangingOtherItems() {
+        assertEquals(listOf("b", "a", "c"), reorderPinnedPackages(listOf("a", "b", "c"), "b", -1))
+        assertEquals(listOf("a", "c", "b"), reorderPinnedPackages(listOf("a", "b", "c"), "b", 1))
+    }
+
+    @Test
+    fun pinReorderingKeepsBoundaryItemsInPlace() {
+        assertEquals(listOf("a", "b"), reorderPinnedPackages(listOf("a", "b"), "a", -1))
+        assertEquals(listOf("a", "b"), reorderPinnedPackages(listOf("a", "b"), "b", 1))
+        assertEquals(listOf("a", "b"), reorderPinnedPackages(listOf("a", "b"), "missing", 1))
+    }
+
+    @Test
     fun readableSizeUsesByteAndKilobyteUnits() {
         assertEquals("0 Б", readableSize(0))
         assertEquals("512 Б", readableSize(512))
