@@ -55,7 +55,8 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Advanced permission/error recovery and folder copy/move
 - [x] ZIP, RAR and 7Z extraction with entry-count and expanded-size limits
 - [x] Optional archive password field; memory caps for 7Z and RAR extraction
-- [ ] Archive preview/listing before extraction, multi-volume RAR, and broader codec compatibility
+- [x] Archive preview/listing before extraction
+- [ ] Multi-volume RAR and broader codec compatibility
 - [ ] Error handling for inaccessible, protected and unsupported files
 
 ### Stage 0.5 — System tools and advanced settings
@@ -67,6 +68,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Optional controls only where Android permissions and Samsung firmware allow them
 
 ### Stage 0.6 — Privileged features (conditional)
+- [x] Manual root-access check; no `su` command runs until the user explicitly taps the check button
 - [ ] Evaluate root-only capabilities separately
 - [ ] Implement only if explicitly supported, safely detectable and optional
 - [ ] Keep the launcher fully usable without root
