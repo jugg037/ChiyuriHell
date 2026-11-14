@@ -45,6 +45,8 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     var deleteTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameValue by remember { mutableStateOf("") }
+    var createFolderDialog by remember { mutableStateOf(false) }
+    var newFolderName by remember { mutableStateOf("Новая папка") }
     var clipboardFile by remember { mutableStateOf<DocumentFile?>(null) }
     var clipboardMove by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -208,9 +210,8 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         if (root != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton(enabled = current?.canWrite() == true, onClick = {
-                    val created = runCatching { current?.createDirectory("Новая папка") != null }.getOrDefault(false)
-                    message = if (created) "Папка создана" else "Не удалось создать папку"
-                    if (created) refreshKey++
+                    newFolderName = "Новая папка"
+                    createFolderDialog = true
                 }) { Text("＋ Новая папка", color = LocalAccent.current) }
                 Spacer(Modifier.weight(1f))
                 TextButton(enabled = clipboardFile != null && current?.canWrite() == true, onClick = {
@@ -277,6 +278,32 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                     )
                 },
                 confirmButton = { TextButton(onClick = { archivePreview = null }) { Text("Готово", color = LocalAccent.current) } }
+            )
+        }
+        if (createFolderDialog) {
+            AlertDialog(
+                onDismissRequest = { createFolderDialog = false },
+                title = { Text("Создать папку") },
+                text = {
+                    OutlinedTextField(value = newFolderName, onValueChange = { newFolderName = it }, singleLine = true, label = { Text("Имя папки") })
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val cleanName = newFolderName.trim()
+                        val validName = cleanName.isNotBlank() && cleanName != "." && cleanName != ".." &&
+                            !cleanName.contains('/') && !cleanName.contains('\\')
+                        val created = validName && current?.canWrite() == true &&
+                            runCatching { current?.createDirectory(cleanName) != null }.getOrDefault(false)
+                        message = when {
+                            !validName -> "Недопустимое имя папки"
+                            created -> "Папка создана"
+                            else -> "Не удалось создать папку"
+                        }
+                        if (created) refreshKey++
+                        createFolderDialog = false
+                    }) { Text("Создать", color = LocalAccent.current) }
+                },
+                dismissButton = { TextButton(onClick = { createFolderDialog = false }) { Text("Отмена") } }
             )
         }
         if (renameTarget != null) {
