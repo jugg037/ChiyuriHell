@@ -580,6 +580,7 @@ private fun DesktopScreen() {
                                 Text("Ctrl + 1 / 2 / 3 — рабочие столы", color = MainText, fontSize = 10.sp)
                                 Text("Ctrl + Alt + F — файловый менеджер", color = MainText, fontSize = 10.sp)
                                 Text("Ctrl + Alt + S — настройки Chiyuri", color = MainText, fontSize = 10.sp)
+                                Text("Esc — закрыть активную панель", color = MainText, fontSize = 10.sp)
                             }
                             TextButton(onClick = { settingsOpen = false; settingsMinimized = false }) { Text("Закрыть", color = LocalAccent.current) }
                         }
