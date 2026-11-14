@@ -7,12 +7,12 @@
         android:allowBackup="true"
         android:label="Chiyuri Desktop"
         android:theme="@style/AppTheme"
-        android:supportsRtl="true"
-        android:resizeableActivity="true">
+        android:supportsRtl="true">
 
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
