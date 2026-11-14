@@ -455,6 +455,7 @@ private fun DesktopScreen() {
                             }) { Text(if (rootChecking) "Проверка…" else "Проверить root-доступ", color = LocalAccent.current) }
                             Text("Активное приложение", color = Muted, fontSize = 12.sp)
                             Text(if (usageAccessGranted) "Usage Access разрешён" else "Usage Access не предоставлен", color = MainText, fontSize = 11.sp)
+                            Text("Сейчас: ${apps.firstOrNull { it.packageName == activePackage }?.label ?: if (usageAccessGranted) "рабочий стол или системное окно" else "не определяется"}", color = MainText, fontSize = 11.sp)
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)) }) {
                                 Text("Настроить отслеживание", color = LocalAccent.current)
                             }
