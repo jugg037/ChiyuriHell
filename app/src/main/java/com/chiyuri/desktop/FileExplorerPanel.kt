@@ -96,6 +96,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
             .getOrElse { emptyList() }
     }
     val filteredEntries = entries.filter { it.name?.contains(fileSearch, ignoreCase = true) == true }
+    val pathLabel = (listOf(root?.name ?: "Хранилище") + folderStack.map { it.name ?: "…" }).joinToString(" › ")
     val visibleEntries = when (sortMode) {
         "date" -> filteredEntries.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenByDescending { it.lastModified() })
         "size" -> filteredEntries.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenByDescending { it.length() })
@@ -149,6 +150,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
             TextButton(enabled = !isBusy, onClick = onClose) { Text("×", color = LocalAccent.current) }
         }
         Text("Папка: ${current?.name ?: root?.name ?: "не выбрана"} · ${entries.size} элементов", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text("Путь: $pathLabel", color = Muted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text("Доступ: ${when { root == null -> "не выбран"; root?.canWrite() == true -> "чтение и запись"; root?.canRead() == true -> "только чтение"; else -> "недоступен" }}", color = Muted, fontSize = 10.sp)
         Text(message, color = Muted, fontSize = 11.sp)
         if (isBusy) {
