@@ -22,6 +22,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 ### Stage 0.1 — Desktop shell
 - [x] Desktop, Start menu, app search and Android app launching
 - [x] Persistent taskbar app pinning and unpinning
+- [x] Ordered taskbar pins with left/right reordering from the Start menu
 - [ ] Taskbar polish and true foreground-app indication (Android background/foreground restrictions apply)
   - [x] Recent launch history and last-launched marker
   - [x] Adjacent/split-screen launch request for apps on supported Android/Samsung configurations
