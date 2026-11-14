@@ -40,3 +40,5 @@ internal fun nextFileSortMode(mode: String): String = when (mode) {
 }
 
 internal fun isWideDesktop(widthDp: Int): Boolean = widthDp >= 1024
+internal fun maxDualPanelWidth(widthDp: Int): Float =
+    ((widthDp - 364) / 2f).coerceIn(260f, 420f)
