@@ -383,8 +383,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                 confirmButton = {
                     TextButton(onClick = {
                         val cleanName = newFolderName.trim()
-                        val validName = cleanName.isNotBlank() && cleanName.length <= 255 && cleanName != "." && cleanName != ".." &&
-                            !cleanName.contains('/') && !cleanName.contains('\\') && cleanName.none { it.code < 0x20 || it.code == 0x7F }
+                        val validName = isValidFileName(cleanName)
                         val created = validName && current?.canWrite() == true &&
                             runCatching { current?.createDirectory(cleanName) != null }.getOrDefault(false)
                         message = when {
@@ -410,8 +409,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                     TextButton(onClick = {
                         val target = renameTarget
                         val cleanName = renameValue.trim()
-                        val validName = cleanName.isNotBlank() && cleanName.length <= 255 && cleanName != "." && cleanName != ".." &&
-                            !cleanName.contains('/') && !cleanName.contains('\\') && cleanName.none { it.code < 0x20 || it.code == 0x7F }
+                        val validName = isValidFileName(cleanName)
                         val renamed = target != null && validName && target.canWrite() &&
                             runCatching { target.renameTo(cleanName) }.getOrDefault(false)
                         message = when {
