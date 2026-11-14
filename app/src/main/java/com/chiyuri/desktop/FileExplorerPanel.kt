@@ -98,6 +98,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     val visibleEntries = when (sortMode) {
         "date" -> filteredEntries.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenByDescending { it.lastModified() })
         "size" -> filteredEntries.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenByDescending { it.length() })
+        "type" -> filteredEntries.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { it.name.orEmpty().substringAfterLast(".", "").lowercase(Locale.getDefault()) }.thenBy { it.name.orEmpty().lowercase(Locale.getDefault()) })
         else -> filteredEntries.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { it.name.orEmpty().lowercase(Locale.getDefault()) })
     }
 
@@ -156,10 +157,10 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Сортировка:", color = Muted, fontSize = 10.sp)
             TextButton(enabled = !isBusy, onClick = {
-                sortMode = when (sortMode) { "name" -> "date"; "date" -> "size"; else -> "name" }
+                sortMode = when (sortMode) { "name" -> "date"; "date" -> "size"; "size" -> "type"; else -> "name" }
                 prefs.edit().putString("file_sort_mode", sortMode).apply()
             }) {
-                Text(when (sortMode) { "date" -> "По дате"; "size" -> "По размеру"; else -> "По имени" }, color = LocalAccent.current, fontSize = 10.sp)
+                Text(when (sortMode) { "date" -> "По дате"; "size" -> "По размеру"; "type" -> "По типу"; else -> "По имени" }, color = LocalAccent.current, fontSize = 10.sp)
             }
         }
         OutlinedTextField(value = fileSearch, onValueChange = { fileSearch = it }, enabled = !isBusy, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("Поиск файлов") })
