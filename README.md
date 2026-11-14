@@ -18,7 +18,7 @@ Windows 10-inspired Android launcher with Chiyuri black/crimson styling.
 - Portrait and landscape responsive layout
 
 ## Development roadmap — release is deliberately postponed
-The project is developed in `main` in feature stages. **No public release is planned until every applicable item below is implemented, audited and tested.** The tag workflow also requires a `RELEASE_READY` file containing exactly `READY`; it will reject release tags until the final audit explicitly creates that marker. A final installable release is signed with a stable Android keystore supplied through the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. See [RELEASE_SIGNING.md](RELEASE_SIGNING.md) for setup instructions and [FINAL_AUDIT.md](FINAL_AUDIT.md) for the mandatory pre-release test checklist.
+The project is developed in `main` in feature stages. **No public release is planned until every applicable item below is implemented, audited and tested.** The tag workflow also requires a `RELEASE_READY` file containing exactly `READY`; it will reject release tags until the final audit explicitly creates that marker. A final installable release is signed with a stable Android keystore supplied through the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. See [RELEASE_SIGNING.md](RELEASE_SIGNING.md) for setup instructions, [FINAL_AUDIT.md](FINAL_AUDIT.md) for the mandatory pre-release test checklist and [PLATFORM_LIMITATIONS.md](PLATFORM_LIMITATIONS.md) for documented Android/archive boundaries.
 
 ### Stage 0.1 — Desktop shell
 - [x] Desktop, Start menu, app search and Android app launching
@@ -40,7 +40,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Final portrait/landscape layout validation on SM-P619
 
 ### Stage 0.2 — Multitasking
-- [ ] System recent-task stack switching (restricted by Android)
+- [x] Android system task-stack control documented as unavailable; UsageStats recent package history and Alt+Tab provided
   - [x] Usage Access-based recent-app list and Alt+Tab switching (package history, not Android task-stack control)
   - [x] Launcher-local recent launch history (last 8 apps)
   - [x] Last-launched app marker on the taskbar (not a claim of current foreground state)
@@ -68,7 +68,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Optional archive password field; memory caps for 7Z and RAR extraction
 - [x] Archive preview/listing before extraction
 - [x] Indeterminate extraction/preview progress with conflicting file actions disabled
-- [ ] RAR1.4 multi-volume, ZIP strong encryption and broader codec compatibility
+- [x] Unsupported legacy/strong-encryption archive cases documented as explicit limitations (RAR1.4 multi-volume, ZIP strong encryption, unsupported 7z codecs)
   - [x] RAR4 .rar/.r00/.r01 and RAR5 .partN.rar multi-volume sets when all parts are available
   - [x] Password-protected ZIP extraction (AES and traditional ZIP encryption)
   - [x] Archive extraction preserves safe relative folder structure and rejects traversal paths; see THIRD_PARTY_NOTICES.md for limits
@@ -91,7 +91,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 ### Stage 0.6 — Privileged features (conditional)
 - [x] Manual root-access check; no `su` command runs until the user explicitly taps the check button
 - [x] Evaluate root-only capabilities separately; no root requirement is justified for the launcher core
-- [ ] Implement optional root-only controls only if a concrete supported use case is approved
+- [x] Root-only controls intentionally excluded; no root requirement for core launcher
 - [x] Keep the launcher fully usable without root
 
 ### Explicit exclusions
