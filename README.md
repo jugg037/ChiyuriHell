@@ -24,6 +24,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Persistent taskbar app pinning and unpinning
 - [x] Ordered taskbar pins with left/right reordering from the Start menu
 - [ ] Taskbar polish and true foreground-app indication (Android background/foreground restrictions apply)
+  - [x] Optional real foreground detection after the user grants Usage Access
   - [x] Recent launch history and last-launched marker
   - [x] Adjacent/split-screen launch request for apps on supported Android/Samsung configurations
 - [x] Desktop shortcuts and shortcut management
@@ -66,6 +67,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Launcher behavior, appearance and interaction settings
   - [x] Persisted background presets, custom wallpaper image and fit/fill/stretch options
   - [x] Three persistent accent-color choices
+  - [x] Optional Usage Access setting for taskbar foreground highlighting
 - [ ] Optional controls only where Android permissions and Samsung firmware allow them
 
 ### Stage 0.6 — Privileged features (conditional)
