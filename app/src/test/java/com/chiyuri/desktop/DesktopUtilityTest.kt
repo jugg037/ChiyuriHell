@@ -21,7 +21,7 @@ class DesktopUtilityTest {
         assertEquals(null, safeArchiveEntryPath("""C:\Windows\evil.txt"""))
         assertEquals(null, safeArchiveEntryPath((1..65).joinToString("/") { "x" }))
         assertEquals(null, safeArchiveEntryPath("a".repeat(256)))
-        assertEquals(null, safeArchiveEntryPath("bad\\u0000name"))
+        assertEquals(null, safeArchiveEntryPath("bad\u0000name"))
         assertEquals(null, safeArchiveEntryPath(""))
     }
 
