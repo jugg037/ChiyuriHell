@@ -235,9 +235,6 @@ private fun copySingleRarToTemp(context: Context, archiveFile: DocumentFile): Pa
     }
 }
 
-internal fun isCompleteRarPartSequence(partNumbers: List<Int>): Boolean =
-    partNumbers.isNotEmpty() && partNumbers.sorted() == (1..(partNumbers.maxOrNull() ?: 0)).toList()
-
 internal fun isCompleteLegacyRarPartSequence(partNumbers: List<Int>): Boolean =
     partNumbers.isNotEmpty() && partNumbers.sorted() == (0..(partNumbers.maxOrNull() ?: -1)).toList()
 
