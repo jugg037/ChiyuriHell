@@ -398,7 +398,7 @@ private fun copyDocumentEntry(
     if (budget.entries > 1000) throw IOException("В операции больше 1000 элементов")
     if (depth > 64) throw IOException("Слишком глубокая структура папок")
     val name = source.name?.substringAfterLast('/')?.substringAfterLast('\\')
-        ?.takeIf { it.isNotBlank() && it != "." && it != ".." }
+        ?.takeIf { it.isNotBlank() && it.length <= 255 && it != "." && it != ".." && it.none { character -> character.code < 0x20 || character.code == 0x7F } }
         ?: throw IOException("Недопустимое имя элемента")
     if (destination.findFile(name) != null) throw IOException("Элемент с именем $name уже существует")
     if (source.isDirectory) {
