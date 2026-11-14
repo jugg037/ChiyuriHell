@@ -114,7 +114,8 @@ private fun ChiyuriTheme(content: @Composable () -> Unit) {
 @Composable
 private fun DesktopScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val isWideLayout = isWideDesktop(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp)
+    val screenWidthDp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
+    val isWideLayout = isWideDesktop(screenWidthDp)
     var apps by remember { mutableStateOf(loadApps(context)) }
     var pinnedPackages by remember { mutableStateOf(loadPinnedPackages(context, apps)) }
     var workspace by remember { mutableIntStateOf(loadWorkspace(context)) }
@@ -139,7 +140,11 @@ private fun DesktopScreen() {
     var showTaskbarDate by remember { mutableStateOf(loadDesktopPreference(context, "show_taskbar_date", true)) }
     var appTileSize by remember { mutableFloatStateOf(loadDesktopIntPreference(context, "app_tile_size", 76).toFloat()) }
     var panelWidth by remember { mutableFloatStateOf(loadDesktopIntPreference(context, "panel_width", 320).toFloat()) }
-    val effectivePanelWidth = if (isWideLayout) panelWidth.coerceIn(260f, 420f) else panelWidth.coerceIn(245f, 300f)
+    val effectivePanelWidth = when {
+        !isWideLayout -> panelWidth.coerceIn(245f, 300f)
+        filesOpen && settingsOpen -> panelWidth.coerceIn(260f, maxDualPanelWidth(screenWidthDp))
+        else -> panelWidth.coerceIn(260f, 420f)
+    }
     var rootStatus by remember { mutableStateOf("Не проверено") }
     var rootChecking by remember { mutableStateOf(false) }
     var usageAccessGranted by remember { mutableStateOf(hasUsageAccess(context)) }
