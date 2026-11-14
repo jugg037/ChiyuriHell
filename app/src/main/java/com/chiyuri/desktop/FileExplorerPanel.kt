@@ -46,13 +46,21 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     var clipboardMove by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                root = DocumentFile.fromTreeUri(context, uri)
-                folderStack = emptyList()
+            root = DocumentFile.fromTreeUri(context, uri)
+            folderStack = emptyList()
+            val persisted = runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }.isSuccess
+            if (persisted) {
                 prefs.edit().putString("file_tree_uri", uri.toString()).apply()
                 message = "Доступ к папке сохранён"
-            }.onFailure { message = "Не удалось сохранить доступ: ${it.localizedMessage}" }
+            } else {
+                prefs.edit().remove("file_tree_uri").apply()
+                message = "Папка доступна только до закрытия приложения"
+            }
         }
     }
     val current = folderStack.lastOrNull() ?: root
