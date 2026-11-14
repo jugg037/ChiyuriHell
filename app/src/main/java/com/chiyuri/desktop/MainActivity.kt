@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.documentfile.provider.DocumentFile
 import com.github.junrar.Archive
+import com.github.junrar.ArchiveOptions
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -591,6 +592,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
     var fileSearch by remember { mutableStateOf("") }
+    var archivePassword by remember { mutableStateOf("") }
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameValue by remember { mutableStateOf("") }
     var clipboardFile by remember { mutableStateOf<DocumentFile?>(null) }
@@ -619,8 +621,8 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
             val result = runCatching {
                 when (format) {
                     "ZIP" -> extractZipArchive(context, entry, current)
-                    "7Z" -> extractSevenZArchive(context, entry, current)
-                    else -> extractRarArchive(context, entry, current)
+                    "7Z" -> extractSevenZArchive(context, entry, current, archivePassword)
+                    else -> extractRarArchive(context, entry, current, archivePassword)
                 }
             }
             withContext(Dispatchers.Main) {
@@ -638,6 +640,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
         Text("Папка: ${current?.name ?: root?.name ?: "не выбрана"} · ${entries.size} элементов", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(message, color = Muted, fontSize = 11.sp)
         OutlinedTextField(value = fileSearch, onValueChange = { fileSearch = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("Поиск файлов") })
+        OutlinedTextField(value = archivePassword, onValueChange = { archivePassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), label = { Text("Пароль архива (если нужен)") })
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
             if (folderStack.isNotEmpty()) OutlinedButton(onClick = { folderStack = folderStack.dropLast(1) }) { Text("Назад") }
@@ -798,7 +801,7 @@ private class LimitedOutputStream(
 private fun safeArchiveEntryName(rawName: String): String =
     rawName.substringAfterLast('/').substringAfterLast('\\').trim()
 
-private fun extractSevenZArchive(context: Context, archive: DocumentFile, destination: DocumentFile?): Int {
+private fun extractSevenZArchive(context: Context, archive: DocumentFile, destination: DocumentFile?, password: String): Int {
     require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
     val tempFile = File.createTempFile("chiyuri-7z-", ".7z", context.cacheDir)
     try {
@@ -819,7 +822,9 @@ private fun extractSevenZArchive(context: Context, archive: DocumentFile, destin
         var extracted = 0
         var processed = 0
         var totalBytes = 0L
-        SevenZFile.builder().setFile(tempFile).setMaxMemoryLimitKiB(64 * 1024).get().use { seven ->
+        SevenZFile.builder().setFile(tempFile).setMaxMemoryLimitKiB(64 * 1024).apply {
+            if (password.isNotEmpty()) setPassword(password.toCharArray())
+        }.get().use { seven ->
             var entry = seven.nextEntry
             while (entry != null) {
                 processed++
@@ -858,14 +863,18 @@ private fun extractSevenZArchive(context: Context, archive: DocumentFile, destin
     }
 }
 
-private fun extractRarArchive(context: Context, archiveFile: DocumentFile, destination: DocumentFile?): Int {
+// Junrar is used for extraction only. Its UnRAR license prohibits using the code to develop a RAR-compatible archiver.
+private fun extractRarArchive(context: Context, archiveFile: DocumentFile, destination: DocumentFile?, password: String): Int {
     require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
     var extracted = 0
     var processed = 0
     var totalBytes = 0L
     context.contentResolver.openInputStream(archiveFile.uri).use { input ->
         requireNotNull(input) { "Не удалось прочитать RAR-архив" }
-        Archive(input).use { rar ->
+        val options = ArchiveOptions.builder().maxDictionarySize(128L * 1024L * 1024L).apply {
+            if (password.isNotEmpty()) password(password.toCharArray())
+        }.build()
+        Archive(input, options).use { rar ->
             var header = rar.nextFileHeader()
             while (header != null) {
                 processed++
