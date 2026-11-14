@@ -56,18 +56,16 @@ The project is developed in `main` in feature stages. **No public release is pla
 ### Stage 0.3 — File manager
 - [x] Browse a user-selected shared-storage folder using Android's Storage Access Framework
 - [x] Search and sort entries by name, modification date or size
-- [x] Open supported files with installed Android apps; create folders and delete files
+- [x] Open supported files with installed Android apps
 - [x] Basic file operations: create folders, rename files/folders and confirm recursive deletion using granted SAF permissions
 - [x] Copy/move files and folders recursively using SAF, with 1,000-entry, 64-level and 512 MiB limits
 - [x] Progress feedback and action lockout during long file/archive operations
-- [x] Confirmed recursive folder deletion with entry/depth limits
 - [x] Advanced permission/error recovery for common SAF provider failures
   - [x] Detect expired SAF folder grants and request folder selection again
   - [x] Detect read-only folders and disable write operations
 - [x] ZIP, RAR and 7Z extraction with entry-count and expanded-size limits
 - [x] Optional archive password field; memory caps for 7Z and RAR extraction
 - [x] Archive preview/listing before extraction
-- [x] Indeterminate extraction/preview progress with conflicting file actions disabled
 - [x] Unsupported legacy/strong-encryption archive cases documented as explicit limitations (RAR1.4 multi-volume, ZIP strong encryption, unsupported 7z codecs)
   - [x] RAR4 .rar/.r00/.r01 and RAR5 .partN.rar multi-volume sets when all parts are available
   - [x] Password-protected ZIP extraction (AES and traditional ZIP encryption)
