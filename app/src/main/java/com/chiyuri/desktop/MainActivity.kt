@@ -44,6 +44,16 @@ import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusable
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -112,6 +122,7 @@ private fun DesktopScreen() {
     var activePanel by remember { mutableStateOf("files") }
     var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
     var wallpaperScale by remember { mutableIntStateOf(loadWallpaperScale(context)) }
+    val focusRequester = remember { FocusRequester() }
     var recentPackages by remember { mutableStateOf(loadRecentPackages(context)) }
     var lastLaunchedPackage by remember { mutableStateOf(loadLastLaunched(context)) }
     var wallpaperUri by remember { mutableStateOf(loadWallpaperUri(context)) }
@@ -129,6 +140,8 @@ private fun DesktopScreen() {
             }.getOrNull() }
         }
     }
+
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
     LaunchedEffect(startOpen) {
         if (startOpen) apps = loadApps(context)
@@ -171,7 +184,46 @@ private fun DesktopScreen() {
         saveDesktopPackages(context, updated)
     }
 
-    Box(Modifier.fillMaxSize().background(Night)) {
+    Box(
+        Modifier.fillMaxSize().background(Night).focusRequester(focusRequester).focusable()
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when {
+                    event.isCtrlPressed && event.key == Key.Spacebar -> {
+                        startOpen = !startOpen
+                        true
+                    }
+                    event.isCtrlPressed && event.isAltPressed && event.key == Key.F -> {
+                        filesOpen = true
+                        if (!isWideLayout) settingsOpen = false
+                        activePanel = "files"
+                        startOpen = false
+                        true
+                    }
+                    event.isCtrlPressed && event.isAltPressed && event.key == Key.S -> {
+                        settingsOpen = true
+                        if (!isWideLayout) filesOpen = false
+                        activePanel = "settings"
+                        startOpen = false
+                        true
+                    }
+                    event.isAltPressed && event.key == Key.Tab -> {
+                        val nextApp = apps.firstOrNull { it.packageName in recentPackages && it.packageName != lastLaunchedPackage }
+                        if (nextApp != null) openApp(nextApp)
+                        nextApp != null
+                    }
+                    event.key == Key.Escape -> {
+                        when {
+                            startOpen -> startOpen = false
+                            activePanel == "files" && filesOpen -> filesOpen = false
+                            activePanel == "settings" && settingsOpen -> settingsOpen = false
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+    ) {
         if (wallpaperBitmap != null) {
             Image(bitmap = wallpaperBitmap!!, contentDescription = "Обои рабочего стола", modifier = Modifier.fillMaxSize(), contentScale = when (wallpaperScale) { 1 -> ContentScale.Fit; 2 -> ContentScale.FillBounds; else -> ContentScale.Crop })
         } else {
