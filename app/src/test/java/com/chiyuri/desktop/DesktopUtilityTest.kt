@@ -32,6 +32,16 @@ class DesktopUtilityTest {
     }
 
     @Test
+    fun rarMultipartSetsRequireEveryPartStartingAtOne() {
+        assertEquals(true, isCompleteRarPartSequence(listOf(1)))
+        assertEquals(true, isCompleteRarPartSequence(listOf(1, 2, 3)))
+        assertEquals(false, isCompleteRarPartSequence(listOf(1, 3)))
+        assertEquals(false, isCompleteRarPartSequence(listOf(2, 3)))
+        assertEquals(false, isCompleteRarPartSequence(listOf(1, 1, 2)))
+        assertEquals(false, isCompleteRarPartSequence(emptyList()))
+    }
+
+    @Test
     fun readableSizeUsesByteAndKilobyteUnits() {
         assertEquals("0 Б", readableSize(0))
         assertEquals("512 Б", readableSize(512))
