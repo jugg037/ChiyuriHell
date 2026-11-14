@@ -82,6 +82,14 @@ class DesktopUtilityTest {
     }
 
     @Test
+    fun dualPanelLayoutRequiresEnoughHorizontalSpace() {
+        assertEquals(false, isWideDesktop(700))
+        assertEquals(false, isWideDesktop(1023))
+        assertEquals(true, isWideDesktop(1024))
+        assertEquals(true, isWideDesktop(1280))
+    }
+
+    @Test
     fun fileSortModeCyclesAndPersistsAsAStableValue() {
         assertEquals("date", nextFileSortMode("name"))
         assertEquals("size", nextFileSortMode("date"))
