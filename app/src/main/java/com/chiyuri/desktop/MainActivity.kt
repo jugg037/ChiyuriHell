@@ -516,9 +516,8 @@ private fun DesktopScreen() {
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
                             TextButton(onClick = {
                                 val homeSettings = Intent(android.provider.Settings.ACTION_HOME_SETTINGS)
-                                val target = if (homeSettings.resolveActivity(context.packageManager) != null) homeSettings
-                                    else Intent(android.provider.Settings.ACTION_SETTINGS)
-                                context.startActivity(target)
+                                runCatching { context.startActivity(homeSettings) }
+                                    .onFailure { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
                             }) { Text("Выбрать лаунчер по умолчанию", color = LocalAccent.current) }
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = LocalAccent.current) }
                             TextButton(onClick = { settingsOpen = false; settingsMinimized = false }) { Text("Закрыть", color = LocalAccent.current) }
