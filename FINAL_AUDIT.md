@@ -13,7 +13,7 @@ Do not create RELEASE_READY or push a version tag until every applicable check b
 ## Target-device checks — Samsung Galaxy Tab S6 Lite SM-P619
 - [ ] Install the debug build and select Chiyuri Desktop as the default Home app
 - [ ] Return to One UI Home and switch back to Chiyuri Desktop
-- [ ] Test portrait and landscape layouts, on-screen keyboard and hardware keyboard shortcuts
+- [ ] Test portrait and landscape layouts, edge-to-edge system bars, on-screen keyboard and hardware keyboard shortcuts
 - [ ] Test Start menu, app search, app launch, empty search state and app-list refresh
 - [ ] Test pin, unpin, reorder and persistence of taskbar applications
 - [ ] Test all three workspaces, custom names and per-workspace desktop shortcuts
