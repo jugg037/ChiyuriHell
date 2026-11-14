@@ -122,6 +122,9 @@ internal fun extractSevenZArchive(context: Context, archive: DocumentFile, desti
 }
 
 // Junrar is used for extraction only. Its UnRAR license prohibits using the code to develop a RAR-compatible archiver.
+internal fun isCompleteRarPartSequence(partNumbers: List<Int>): Boolean =
+    partNumbers.isNotEmpty() && partNumbers.sorted() == (1..(partNumbers.maxOrNull() ?: 0)).toList()
+
 private fun copyRarSetToTemp(context: Context, archiveFile: DocumentFile): Pair<File, File> {
     val name = archiveFile.name ?: throw IOException("У RAR-архива отсутствует имя")
     val partPattern = Regex("^(.*)\\.part(\\d+)\\.rar$", RegexOption.IGNORE_CASE)
@@ -136,8 +139,7 @@ private fun copyRarSetToTemp(context: Context, archiveFile: DocumentFile): Pair<
             val number = match.groupValues[2].toIntOrNull() ?: return@mapNotNull null
             number to item
         }.sortedBy { it.first }
-        if (found.isEmpty() || found.first().first != 1 ||
-            found.map { it.first } != (1..found.last().first).toList()) {
+        if (!isCompleteRarPartSequence(found.map { it.first })) {
             throw IOException("Неполный набор томов RAR: нужны части начиная с part1")
         }
         found.map { it.second }
