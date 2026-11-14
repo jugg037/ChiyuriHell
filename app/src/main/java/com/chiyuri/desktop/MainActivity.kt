@@ -417,7 +417,7 @@ private fun DesktopScreen() {
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = LocalAccent.current) }
                             Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { settingsOpen = false }) { Text("Закрыть", color = LocalAccent.current) }
+                            TextButton(onClick = { settingsOpen = false; settingsMinimized = false }) { Text("Закрыть", color = LocalAccent.current) }
                         }
                     }
                 }
