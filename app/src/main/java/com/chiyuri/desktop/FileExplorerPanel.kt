@@ -15,10 +15,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
@@ -43,6 +48,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     var fileSearch by remember { mutableStateOf("") }
     var sortMode by remember { mutableStateOf(prefs.getString("file_sort_mode", "name") ?: "name") }
     var archivePassword by remember { mutableStateOf("") }
+    var showArchivePassword by remember { mutableStateOf(false) }
     var isBusy by remember { mutableStateOf(false) }
     var busyLabel by remember { mutableStateOf("Обработка…") }
     var archivePreview by remember { mutableStateOf<String?>(null) }
@@ -157,7 +163,24 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
             }
         }
         OutlinedTextField(value = fileSearch, onValueChange = { fileSearch = it }, enabled = !isBusy, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("Поиск файлов") })
-        OutlinedTextField(value = archivePassword, onValueChange = { archivePassword = it }, enabled = !isBusy, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), label = { Text("Пароль архива (если нужен)") })
+        OutlinedTextField(
+            value = archivePassword,
+            onValueChange = { archivePassword = it },
+            enabled = !isBusy,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (showArchivePassword) VisualTransformation.None else PasswordVisualTransformation(),
+            label = { Text("Пароль архива (если нужен)") },
+            trailingIcon = {
+                IconButton(onClick = { showArchivePassword = !showArchivePassword }) {
+                    Icon(
+                        if (showArchivePassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription = if (showArchivePassword) "Скрыть пароль" else "Показать пароль",
+                        tint = Muted
+                    )
+                }
+            }
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(enabled = !isBusy, onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
             if (folderStack.isNotEmpty()) OutlinedButton(enabled = !isBusy, onClick = { folderStack = folderStack.dropLast(1); fileSearch = "" }) { Text("Назад") }
