@@ -66,7 +66,7 @@ internal fun safeArchiveEntryPath(rawName: String): List<String>? {
         Regex("^[A-Za-z]:").containsMatchIn(normalized)) return null
     val segments = normalized.split('/').filter { it.isNotEmpty() }
     if (segments.isEmpty() || segments.size > 64 ||
-        segments.any { it == "." || it == ".." || it.length > 255 || it.any(Char::isISOControl) }) return null
+        segments.any { it == "." || it == ".." || it.length > 255 || it.any { character -> character.code < 0x20 || character.code == 0x7F } }) return null
     return segments
 }
 
