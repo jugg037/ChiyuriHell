@@ -53,6 +53,8 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
+            }.isSuccess || runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }.isSuccess
             if (persisted) {
                 prefs.edit().putString("file_tree_uri", uri.toString()).apply()
