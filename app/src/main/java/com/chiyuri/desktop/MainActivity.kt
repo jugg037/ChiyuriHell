@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
 private fun ChiyuriTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = DefaultLocalAccent.current,
+            primary = DefaultCrimson,
             onPrimary = Color.White,
             background = Night,
             surface = Panel,
