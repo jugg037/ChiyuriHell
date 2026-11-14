@@ -312,7 +312,8 @@ private fun DesktopScreen() {
                         true
                     }
                     event.isAltPressed && event.key == Key.Tab -> {
-                        val nextApp = recentPackageOrder.asSequence().filter { it != lastLaunchedPackage }.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }.firstOrNull()
+                        val currentPackage = activePackage ?: lastLaunchedPackage
+                        val nextApp = recentPackageOrder.asSequence().filter { it != currentPackage }.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }.firstOrNull()
                         if (nextApp != null) openApp(nextApp)
                         nextApp != null
                     }
