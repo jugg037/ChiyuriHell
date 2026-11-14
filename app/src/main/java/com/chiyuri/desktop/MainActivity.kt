@@ -477,7 +477,7 @@ private fun DesktopScreen() {
                                 value = effectivePanelWidth,
                                 onValueChange = { panelWidth = it },
                                 onValueChangeFinished = { saveDesktopIntPreference(context, "panel_width", panelWidth.toInt()) },
-                                valueRange = if (isWideLayout) 260f..420f else 245f..300f,
+                                valueRange = if (isWideLayout) 260f..(if (filesOpen && settingsOpen) maxDualPanelWidth(screenWidthDp) else 420f) else 245f..300f,
                                 steps = 7
                             )
                             Text("Размер плиток приложений: ${appTileSize.toInt()} dp", color = Muted, fontSize = 12.sp)
