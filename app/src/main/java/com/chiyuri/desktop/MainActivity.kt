@@ -224,15 +224,11 @@ private fun DesktopScreen() {
     }
 
     fun movePinned(app: LaunchApp, direction: Int) {
-        val from = pinnedPackages.indexOf(app.packageName)
-        if (from < 0) return
-        val to = (from + direction).coerceIn(0, pinnedPackages.lastIndex)
-        if (from == to) return
-        val updated = pinnedPackages.toMutableList()
-        val item = updated.removeAt(from)
-        updated.add(to, item)
-        pinnedPackages = updated
-        savePinnedPackages(context, updated)
+        val updated = reorderPinnedPackages(pinnedPackages, app.packageName, direction)
+        if (updated != pinnedPackages) {
+            pinnedPackages = updated
+            savePinnedPackages(context, updated)
+        }
     }
 
     fun openApp(app: LaunchApp) {
@@ -1021,6 +1017,17 @@ private class LimitedOutputStream(
     }
 
     override fun flush() = target.flush()
+}
+
+internal fun reorderPinnedPackages(packages: List<String>, packageName: String, direction: Int): List<String> {
+    val from = packages.indexOf(packageName)
+    if (from < 0 || packages.isEmpty()) return packages
+    val to = (from + direction).coerceIn(0, packages.lastIndex)
+    if (from == to) return packages
+    return packages.toMutableList().apply {
+        val item = removeAt(from)
+        add(to, item)
+    }
 }
 
 internal fun safeArchiveEntryName(rawName: String): String =
