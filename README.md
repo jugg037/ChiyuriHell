@@ -18,7 +18,7 @@ Windows 10-inspired Android launcher with Chiyuri black/crimson styling.
 - Portrait and landscape responsive layout
 
 ## Development roadmap — release is deliberately postponed
-The project is developed in `main` in feature stages. **No public release is planned until every applicable item below is implemented, audited and tested.** The tag workflow also requires a `RELEASE_READY` file containing exactly `READY`; it will reject release tags until the final audit explicitly creates that marker. A final installable release is signed with a stable Android keystore supplied through the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. See [RELEASE_SIGNING.md](RELEASE_SIGNING.md) for setup instructions.
+The project is developed in `main` in feature stages. **No public release is planned until every applicable item below is implemented, audited and tested.** The tag workflow also requires a `RELEASE_READY` file containing exactly `READY`; it will reject release tags until the final audit explicitly creates that marker. A final installable release is signed with a stable Android keystore supplied through the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. See [RELEASE_SIGNING.md](RELEASE_SIGNING.md) for setup instructions and [FINAL_AUDIT.md](FINAL_AUDIT.md) for the mandatory pre-release test checklist.
 
 ### Stage 0.1 — Desktop shell
 - [x] Desktop, Start menu, app search and Android app launching
