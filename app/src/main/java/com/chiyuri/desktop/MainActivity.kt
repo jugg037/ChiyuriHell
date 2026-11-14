@@ -608,7 +608,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                         scope.launch(Dispatchers.IO) {
                             val result = runCatching {
                                 val copied = copyDocumentFile(context, source, destination)
-                                if (copied && clipboardMove) source.delete()
+                                if (copied && clipboardMove && !source.delete()) throw IOException("Копия создана, но исходный файл удалить не удалось")
                                 copied
                             }
                             withContext(Dispatchers.Main) {
@@ -669,35 +669,44 @@ private fun copyDocumentFile(context: Context, source: DocumentFile, destination
 private fun extractZipArchive(context: Context, archive: DocumentFile, destination: DocumentFile?): Int {
     require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
     var extracted = 0
+    var processedEntries = 0
     var totalBytes = 0L
     context.contentResolver.openInputStream(archive.uri).use { raw ->
         requireNotNull(raw) { "Не удалось прочитать ZIP-архив" }
         ZipInputStream(raw).use { zip ->
             var item = zip.nextEntry
             while (item != null) {
+                processedEntries++
+                if (processedEntries > 1000) throw IOException("В архиве больше 1000 элементов")
                 if (!item.isDirectory) {
                     val safeName = item.name.substringAfterLast('/').substringAfterLast('\\').trim()
                     if (safeName.isNotBlank() && safeName != "." && safeName != "..") {
-                        val output = destination.createFile("application/octet-stream", safeName)
-                        if (output != null) {
-                            context.contentResolver.openOutputStream(output.uri).use { stream ->
-                                requireNotNull(stream) { "Не удалось создать файл: $safeName" }
-                                val buffer = ByteArray(8192)
-                                while (true) {
-                                    val count = zip.read(buffer)
-                                    if (count < 0) break
-                                    totalBytes += count
-                                    if (totalBytes > 256L * 1024L * 1024L) throw IOException("Превышен лимит распаковки 256 МБ")
-                                    stream.write(buffer, 0, count)
+                        if (destination.findFile(safeName) == null) {
+                            val output = destination.createFile("application/octet-stream", safeName)
+                            if (output != null) {
+                                try {
+                                    context.contentResolver.openOutputStream(output.uri).use { stream ->
+                                        requireNotNull(stream) { "Не удалось создать файл: $safeName" }
+                                        val buffer = ByteArray(8192)
+                                        while (true) {
+                                            val count = zip.read(buffer)
+                                            if (count < 0) break
+                                            totalBytes += count
+                                            if (totalBytes > 256L * 1024L * 1024L) throw IOException("Превышен лимит распаковки 256 МБ")
+                                            stream.write(buffer, 0, count)
+                                        }
+                                    }
+                                    extracted++
+                                } catch (error: Exception) {
+                                    output.delete()
+                                    throw error
                                 }
                             }
-                            extracted++
                         }
                     }
                 }
                 zip.closeEntry()
                 item = zip.nextEntry
-                if (extracted > 1000) throw IOException("Слишком много файлов в архиве")
             }
         }
     }
