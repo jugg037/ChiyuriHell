@@ -79,6 +79,7 @@ private fun DesktopScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
     var apps by remember { mutableStateOf(loadApps(context)) }
     var pinnedPackages by remember { mutableStateOf(loadPinnedPackages(context, apps)) }
+    var desktopPackages by remember { mutableStateOf(loadDesktopPackages(context)) }
     var startOpen by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var clock by remember { mutableStateOf(nowTime()) }
@@ -104,6 +105,13 @@ private fun DesktopScreen() {
             else pinnedPackages + app.packageName
         pinnedPackages = updated
         savePinnedPackages(context, updated)
+    }
+
+    fun toggleDesktopShortcut(app: LaunchApp) {
+        val updated = if (app.packageName in desktopPackages) desktopPackages - app.packageName
+            else desktopPackages + app.packageName
+        desktopPackages = updated
+        saveDesktopPackages(context, updated)
     }
 
     Box(Modifier.fillMaxSize().background(Night)) {
@@ -146,6 +154,25 @@ private fun DesktopScreen() {
                     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Text("Рабочий стол", color = MainText, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
                         Text("Твоя система. Твои правила.", color = Muted, fontSize = 13.sp)
+                        Text("Ярлыки рабочего стола", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
+                        val desktopApps = apps.filter { it.packageName in desktopPackages }
+                        if (desktopApps.isEmpty()) {
+                            Text("Здесь пока пусто. Удерживай приложение в меню «Пуск», чтобы добавить ярлык.", color = Muted, fontSize = 11.sp)
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                desktopApps.chunked(4).forEach { rowApps ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        rowApps.forEach { app ->
+                                            DesktopAppShortcut(
+                                                app = app,
+                                                onClick = { launchApp(context, app) },
+                                                onLongClick = { toggleDesktopShortcut(app) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             DesktopShortcut("Приложения", Icons.Filled.Apps) { startOpen = true }
                             DesktopShortcut("Настройки", Icons.Filled.Settings) {
@@ -192,7 +219,7 @@ private fun DesktopScreen() {
                             }
                             Spacer(Modifier.height(10.dp))
                             Text("Все приложения", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
-                            Text("Удерживай значок, чтобы закрепить его на панели задач или убрать с неё", color = Muted, fontSize = 10.sp)
+                            Text("Долгое нажатие: закрепить на панели задач. Для ярлыка рабочего стола используй отдельную кнопку ниже.", color = Muted, fontSize = 10.sp)
                             Spacer(Modifier.height(6.dp))
                             if (visibleApps.isEmpty()) {
                                 Box(
@@ -215,12 +242,15 @@ private fun DesktopScreen() {
                                     items(visibleApps, key = { it.packageName }) { app ->
                                         AppTile(
                                             app = app,
+                                            pinned = app.packageName in pinnedPackages,
+                                            desktopShortcut = app.packageName in desktopPackages,
                                             onClick = {
                                                 launchApp(context, app)
                                                 startOpen = false
                                                 search = ""
                                             },
-                                            onLongClick = { togglePin(app) }
+                                            onLongClick = { togglePin(app) },
+                                            onDesktopToggle = { toggleDesktopShortcut(app) }
                                         )
                                     }
                                 }
@@ -292,7 +322,14 @@ private fun DesktopShortcut(label: String, icon: androidx.compose.ui.graphics.ve
 }
 
 @Composable
-private fun AppTile(app: LaunchApp, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun AppTile(
+    app: LaunchApp,
+    pinned: Boolean,
+    desktopShortcut: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDesktopToggle: () -> Unit
+) {
     Column(
         Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .background(PanelSoft, RoundedCornerShape(12.dp)).padding(vertical = 10.dp, horizontal = 5.dp),
@@ -305,6 +342,29 @@ private fun AppTile(app: LaunchApp, onClick: () -> Unit, onLongClick: () -> Unit
         )
         Spacer(Modifier.height(6.dp))
         Text(app.label, color = MainText, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(if (pinned) "На панели" else "Закрепить", color = if (pinned) Crimson else Muted, fontSize = 8.sp)
+            Text("·", color = Muted, fontSize = 8.sp)
+            TextButton(onClick = onDesktopToggle, contentPadding = PaddingValues(0.dp)) {
+                Text(if (desktopShortcut) "Убрать ярлык" else "+ На стол", color = if (desktopShortcut) Crimson else Muted, fontSize = 8.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DesktopAppShortcut(app: LaunchApp, onClick: () -> Unit, onLongClick: () -> Unit) {
+    Column(
+        Modifier.width(72.dp).combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            bitmap = remember(app.packageName) { app.icon.toBitmap(96, 96).asImageBitmap() },
+            contentDescription = app.label,
+            modifier = Modifier.size(38.dp)
+        )
+        Text(app.label, color = MainText, fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -335,6 +395,15 @@ private fun loadPinnedPackages(context: Context, apps: List<LaunchApp>): Set<Str
 private fun savePinnedPackages(context: Context, packages: Set<String>) {
     context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
         .edit().putStringSet("pinned_packages", packages.toSet()).apply()
+}
+
+private fun loadDesktopPackages(context: Context): Set<String> =
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
+        .getStringSet("desktop_shortcuts", emptySet())?.toSet() ?: emptySet()
+
+private fun saveDesktopPackages(context: Context, packages: Set<String>) {
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
+        .edit().putStringSet("desktop_shortcuts", packages.toSet()).apply()
 }
 
 private fun launchApp(context: Context, app: LaunchApp) {
