@@ -748,8 +748,7 @@ private fun DesktopScreen() {
                 confirmButton = {
                     TextButton(onClick = {
                         val cleanName = workspaceNameDraft.trim()
-                        val validName = cleanName.isNotBlank() && cleanName.length <= 24 &&
-                            cleanName.none { it.code < 0x20 || it.code == 0x7F }
+                        val validName = isValidWorkspaceName(cleanName)
                         if (index != null && validName) {
                             saveWorkspaceName(context, index, cleanName)
                             workspaceNames = loadWorkspaceNames(context)
