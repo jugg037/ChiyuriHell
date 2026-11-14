@@ -7,6 +7,8 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.graphics.drawable.Drawable
 import android.os.BatteryManager
+import android.os.Build
+import android.app.ActivityManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -96,6 +98,8 @@ private fun DesktopScreen() {
     var filesOpen by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
     var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
+    var recentPackages by remember { mutableStateOf(loadRecentPackages(context)) }
+    var lastLaunchedPackage by remember { mutableStateOf(loadLastLaunched(context)) }
     var wallpaperUri by remember { mutableStateOf(loadWallpaperUri(context)) }
     val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) runCatching {
@@ -132,6 +136,12 @@ private fun DesktopScreen() {
             else pinnedPackages + app.packageName
         pinnedPackages = updated
         savePinnedPackages(context, updated)
+    }
+
+    fun openApp(app: LaunchApp) {
+        lastLaunchedPackage = app.packageName
+        recentPackages = recordRecentApp(context, app.packageName)
+        launchApp(context, app)
     }
 
     fun toggleDesktopShortcut(app: LaunchApp) {
@@ -192,7 +202,7 @@ private fun DesktopScreen() {
                                         rowApps.forEach { app ->
                                             DesktopAppShortcut(
                                                 app = app,
-                                                onClick = { launchApp(context, app) },
+                                                onClick = { openApp(app) },
                                                 onLongClick = { toggleDesktopShortcut(app) }
                                             )
                                         }
@@ -236,6 +246,11 @@ private fun DesktopScreen() {
                                     if (wallpaperStyle == index) Text("✓", color = Crimson)
                                 }
                             }
+                            Text("Сведения об устройстве", color = Muted, fontSize = 12.sp)
+                            Text("Модель: ${Build.MANUFACTURER} ${Build.MODEL}", color = MainText, fontSize = 11.sp)
+                            Text("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})", color = MainText, fontSize = 11.sp)
+                            Text("Оперативная память: ${availableMemory(context)} свободно", color = MainText, fontSize = 11.sp)
+                            Text("Батарея: ${batteryPercent(context)}%", color = MainText, fontSize = 11.sp)
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = Crimson) }
                             Spacer(Modifier.weight(1f))
@@ -275,6 +290,18 @@ private fun DesktopScreen() {
                                 )
                             }
                             Spacer(Modifier.height(10.dp))
+                            val recentApps = apps.filter { it.packageName in recentPackages }
+                            if (recentApps.isNotEmpty()) {
+                                Text("Недавно запускались", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
+                                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    recentApps.forEach { recent ->
+                                        Text(recent.label, color = MainText, fontSize = 10.sp,
+                                            modifier = Modifier.background(PanelSoft, RoundedCornerShape(8.dp)).clickable {
+                                                openApp(recent); startOpen = false; search = ""
+                                            }.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
+                                    }
+                                }
+                            }
                             Text("Все приложения", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
                             Text("Долгое нажатие: закрепить на панели задач. Для ярлыка рабочего стола используй отдельную кнопку ниже.", color = Muted, fontSize = 10.sp)
                             Spacer(Modifier.height(6.dp))
@@ -302,7 +329,7 @@ private fun DesktopScreen() {
                                             pinned = app.packageName in pinnedPackages,
                                             desktopShortcut = app.packageName in desktopPackages,
                                             onClick = {
-                                                launchApp(context, app)
+                                                openApp(app)
                                                 startOpen = false
                                                 search = ""
                                             },
@@ -342,8 +369,8 @@ private fun DesktopScreen() {
             ) {
                 pinnedApps.forEach { app ->
                     Box(
-                        Modifier.size(42.dp).combinedClickable(
-                            onClick = { launchApp(context, app) },
+                        Modifier.size(42.dp).background(if (app.packageName == lastLaunchedPackage) Color(0xFF35101A) else Color.Transparent, RoundedCornerShape(9.dp)).combinedClickable(
+                            onClick = { openApp(app) },
                             onLongClick = { togglePin(app) }
                         ),
                         contentAlignment = Alignment.Center
@@ -528,6 +555,25 @@ private fun wallpaperBrush(style: Int): Brush = when (style) {
     1 -> Brush.linearGradient(listOf(Color(0xFF050506), Color(0xFF101014), Color(0xFF050506)))
     2 -> Brush.radialGradient(listOf(Color(0xFF4A0718), Color(0xFF18050C), Night))
     else -> Brush.linearGradient(listOf(Color(0xFF1B080E), Night, Color(0xFF09090B)))
+}
+
+private fun loadLastLaunched(context: Context): String? = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getString("last_launched_package", null)
+
+private fun loadRecentPackages(context: Context): List<String> = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getString("recent_packages", "")
+    ?.split("|")?.filter { it.isNotBlank() }?.take(8).orEmpty()
+
+private fun recordRecentApp(context: Context, packageName: String): List<String> {
+    val updated = (listOf(packageName) + loadRecentPackages(context).filterNot { it == packageName }).take(8)
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit()
+        .putString("last_launched_package", packageName).putString("recent_packages", updated.joinToString("|")).apply()
+    return updated
+}
+
+private fun availableMemory(context: Context): String {
+    val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    val info = ActivityManager.MemoryInfo()
+    manager.getMemoryInfo(info)
+    return String.format(Locale.getDefault(), "%.1f ГБ", info.availMem / (1024.0 * 1024.0 * 1024.0))
 }
 
 private fun loadApps(context: Context): List<LaunchApp> {
