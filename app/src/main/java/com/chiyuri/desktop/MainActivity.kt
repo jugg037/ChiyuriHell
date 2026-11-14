@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.chiyuri.desktop
 
 import android.content.Context
@@ -30,6 +32,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
@@ -52,7 +55,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusable
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isAltPressed
@@ -1039,7 +1041,6 @@ private fun saveWorkspaceName(context: Context, index: Int, name: String) {
 }
 
 private fun loadWorkspace(context: Context): Int = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("active_workspace", 0).coerceIn(0, 2)
- context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("active_workspace", 0).coerceIn(0, 2)
 
 private fun loadDesktopPackages(context: Context, workspace: Int): Set<String> {
     val prefs = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
