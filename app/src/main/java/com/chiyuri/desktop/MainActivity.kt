@@ -23,8 +23,6 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.items as lazyListItems
@@ -71,12 +69,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
-import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
-import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -84,11 +80,11 @@ import java.util.concurrent.TimeUnit
 
 private val Night = Color(0xFF09090B)
 private val Panel = Color(0xEE17171C)
-private val PanelSoft = Color(0xCC24242B)
+internal val PanelSoft = Color(0xCC24242B)
 private val DefaultCrimson = Color(0xFFD7193F)
-private val LocalAccent = staticCompositionLocalOf { DefaultCrimson }
-private val MainText = Color(0xFFF4F1F2)
-private val Muted = Color(0xFFAAA4A8)
+internal val LocalAccent = staticCompositionLocalOf { DefaultCrimson }
+internal val MainText = Color(0xFFF4F1F2)
+internal val Muted = Color(0xFFAAA4A8)
 
 data class LaunchApp(val label: String, val packageName: String, val icon: Drawable)
 
@@ -702,240 +698,6 @@ private fun DesktopAppShortcut(app: LaunchApp, onClick: () -> Unit, onLongClick:
         )
         Text(app.label, color = MainText, fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
-}
-
-@Composable
-private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize: () -> Unit, onFocus: () -> Unit) {
-    val prefs = remember { context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE) }
-    var root by remember {
-        mutableStateOf(prefs.getString("file_tree_uri", null)?.let { saved ->
-            runCatching { DocumentFile.fromTreeUri(context, Uri.parse(saved)) }.getOrNull()
-        })
-    }
-    var folderStack by remember { mutableStateOf(emptyList<DocumentFile>()) }
-    var refreshKey by remember { mutableIntStateOf(0) }
-    val scope = rememberCoroutineScope()
-    var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
-    var fileSearch by remember { mutableStateOf("") }
-    var archivePassword by remember { mutableStateOf("") }
-    var archivePreview by remember { mutableStateOf<String?>(null) }
-    var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
-    var renameValue by remember { mutableStateOf("") }
-    var clipboardFile by remember { mutableStateOf<DocumentFile?>(null) }
-    var clipboardMove by remember { mutableStateOf(false) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        if (uri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                root = DocumentFile.fromTreeUri(context, uri)
-                folderStack = emptyList()
-                prefs.edit().putString("file_tree_uri", uri.toString()).apply()
-                message = "Доступ к папке сохранён"
-            }.onFailure { message = "Не удалось сохранить доступ: ${it.localizedMessage}" }
-        }
-    }
-    val current = folderStack.lastOrNull() ?: root
-    val entries = remember(current, refreshKey) {
-        runCatching { current?.listFiles()?.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { it.name?.lowercase(Locale.getDefault()) ?: "" }).orEmpty() }
-            .getOrElse { emptyList() }
-    }
-    val visibleEntries = entries.filter { it.name?.contains(fileSearch, ignoreCase = true) == true }
-
-    fun previewArchive(entry: DocumentFile, format: String) {
-        message = "Чтение состава $format…"
-        scope.launch(Dispatchers.IO) {
-            val result = runCatching { listArchiveEntries(context, entry, format, archivePassword) }
-            withContext(Dispatchers.Main) {
-                archivePreview = result.fold(
-                    { names -> if (names.isEmpty()) "Архив пуст" else names.joinToString("\n") },
-                    { "Не удалось прочитать архив: ${it.localizedMessage}" }
-                )
-                message = "Состав архива готов"
-            }
-        }
-    }
-
-    fun startArchiveExtraction(entry: DocumentFile, format: String) {
-        message = "Распаковка $format…"
-        scope.launch(Dispatchers.IO) {
-            val result = runCatching {
-                when (format) {
-                    "ZIP" -> extractZipArchive(context, entry, current)
-                    "7Z" -> extractSevenZArchive(context, entry, current, archivePassword)
-                    else -> extractRarArchive(context, entry, current, archivePassword)
-                }
-            }
-            withContext(Dispatchers.Main) {
-                message = result.fold({ "$format распакован: $it файлов" }, { "Ошибка $format: ${it.localizedMessage}" })
-                if (result.isSuccess) refreshKey++
-            }
-        }
-    }
-
-    Column(Modifier.fillMaxSize().padding(14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Проводник", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable(onClick = onFocus))
-            TextButton(onClick = onMinimize) { Text("—", color = LocalAccent.current) }
-            TextButton(onClick = onClose) { Text("×", color = LocalAccent.current) }
-        }
-        Text("Папка: ${current?.name ?: root?.name ?: "не выбрана"} · ${entries.size} элементов", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(message, color = Muted, fontSize = 11.sp)
-        OutlinedTextField(value = fileSearch, onValueChange = { fileSearch = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("Поиск файлов") })
-        OutlinedTextField(value = archivePassword, onValueChange = { archivePassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), label = { Text("Пароль архива (если нужен)") })
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            OutlinedButton(onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
-            if (folderStack.isNotEmpty()) OutlinedButton(onClick = { folderStack = folderStack.dropLast(1); fileSearch = "" }) { Text("Назад") }
-        }
-        if (root == null) {
-            Spacer(Modifier.height(16.dp))
-            Text("Android откроет системный выбор папки. Можно выбрать доступную папку во внутренней памяти или на SD-карте.", color = Muted, fontSize = 12.sp)
-        } else if (visibleEntries.isEmpty()) {
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(if (entries.isEmpty()) "Папка пуста или недоступна" else "Ничего не найдено", color = Muted, fontSize = 12.sp)
-            }
-        } else {
-            androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                lazyListItems(visibleEntries, key = { it.uri.toString() }) { entry ->
-                    Row(
-                        Modifier.fillMaxWidth().background(PanelSoft, RoundedCornerShape(9.dp)).clickable {
-                            if (entry.isDirectory) { folderStack = folderStack + entry; fileSearch = "" }
-                            else runCatching {
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(entry.uri, entry.type ?: "*/*")
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(intent)
-                            }.onFailure { message = "Не удалось открыть файл: ${it.localizedMessage}" }
-                        }.padding(horizontal = 10.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(if (entry.isDirectory) "▰" else "▤", color = LocalAccent.current, modifier = Modifier.padding(end = 9.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(entry.name ?: "Без названия", color = MainText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
-                        }
-                            TextButton(onClick = {
-                                renameTarget = entry
-                                renameValue = entry.name ?: ""
-                            }) { Text("Имя", color = Muted, fontSize = 10.sp) }
-                        if (!entry.isDirectory) {
-                            TextButton(onClick = { clipboardFile = entry; clipboardMove = false; message = "Файл добавлен в буфер копирования" }) {
-                                Text("Копия", color = Muted, fontSize = 9.sp)
-                            }
-                            TextButton(onClick = { clipboardFile = entry; clipboardMove = true; message = "Файл готов к переносу" }) {
-                                Text("Вырезать", color = Muted, fontSize = 9.sp)
-                            }
-                            when {
-                                entry.name?.endsWith(".zip", ignoreCase = true) == true -> {
-                                    TextButton(onClick = { previewArchive(entry, "ZIP") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = LocalAccent.current, fontSize = 10.sp) }
-                                }
-                                entry.name?.endsWith(".7z", ignoreCase = true) == true -> {
-                                    TextButton(onClick = { previewArchive(entry, "7Z") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = LocalAccent.current, fontSize = 10.sp) }
-                                }
-                                entry.name?.endsWith(".rar", ignoreCase = true) == true -> {
-                                    TextButton(onClick = { previewArchive(entry, "RAR") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = LocalAccent.current, fontSize = 10.sp) }
-                                }
-                            }
-                            TextButton(onClick = {
-                                val deleted = runCatching { entry.delete() }.getOrDefault(false)
-                                message = if (deleted) "Файл удалён" else "Не удалось удалить файл"
-                                if (deleted) refreshKey++
-                            }) { Text("Удалить", color = LocalAccent.current, fontSize = 10.sp) }
-                        }
-                    }
-                }
-            }
-        }
-        if (root != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = {
-                    val created = runCatching { current?.createDirectory("Новая папка") != null }.getOrDefault(false)
-                    message = if (created) "Папка создана" else "Не удалось создать папку"
-                    if (created) refreshKey++
-                }) { Text("＋ Новая папка", color = LocalAccent.current) }
-                Spacer(Modifier.weight(1f))
-                TextButton(enabled = clipboardFile != null, onClick = {
-                    val source = clipboardFile
-                    val destination = current
-                    if (source != null && destination != null) {
-                        message = if (clipboardMove) "Перенос файла…" else "Копирование файла…"
-                        scope.launch(Dispatchers.IO) {
-                            val result = runCatching {
-                                val copied = copyDocumentFile(context, source, destination)
-                                if (copied && clipboardMove && !source.delete()) throw IOException("Копия создана, но исходный файл удалить не удалось")
-                                copied
-                            }
-                            withContext(Dispatchers.Main) {
-                                message = result.fold({ if (it) "Файл ${if (clipboardMove) "перенесён" else "скопирован"}" else "Файл с таким именем уже существует" }, { "Операция не выполнена: ${it.localizedMessage}" })
-                                if (result.getOrDefault(false)) {
-                                    refreshKey++
-                                    clipboardFile = null
-                                }
-                            }
-                        }
-                    }
-                }) { Text("Вставить", color = LocalAccent.current) }
-            }
-        }
-        if (archivePreview != null) {
-            AlertDialog(
-                onDismissRequest = { archivePreview = null },
-                title = { Text("Содержимое архива") },
-                text = {
-                    Text(
-                        archivePreview.orEmpty(),
-                        color = MainText,
-                        fontSize = 11.sp,
-                        modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())
-                    )
-                },
-                confirmButton = { TextButton(onClick = { archivePreview = null }) { Text("Готово", color = LocalAccent.current) } }
-            )
-        }
-        if (renameTarget != null) {
-            AlertDialog(
-                onDismissRequest = { renameTarget = null },
-                title = { Text("Переименовать") },
-                text = {
-                    OutlinedTextField(value = renameValue, onValueChange = { renameValue = it }, singleLine = true, label = { Text("Новое имя") })
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val target = renameTarget
-                        val renamed = target != null && renameValue.isNotBlank() && runCatching { target.renameTo(renameValue.trim()) }.getOrDefault(false)
-                        message = if (renamed) "Имя изменено" else "Не удалось переименовать"
-                        if (renamed) refreshKey++
-                        renameTarget = null
-                    }) { Text("Сохранить", color = LocalAccent.current) }
-                },
-                dismissButton = { TextButton(onClick = { renameTarget = null }) { Text("Отмена") } }
-            )
-        }
-    }
-}
-
-private fun copyDocumentFile(context: Context, source: DocumentFile, destination: DocumentFile): Boolean {
-    require(!source.isDirectory) { "Копирование папок пока не поддерживается" }
-    val name = source.name ?: "file"
-    if (destination.findFile(name) != null) return false
-    val target = destination.createFile(source.type ?: "application/octet-stream", name)
-        ?: throw IOException("Не удалось создать файл назначения")
-    try {
-        context.contentResolver.openInputStream(source.uri).use { input ->
-            requireNotNull(input) { "Не удалось прочитать исходный файл" }
-            context.contentResolver.openOutputStream(target.uri).use { output ->
-                requireNotNull(output) { "Не удалось записать файл" }
-                input.copyTo(output)
-            }
-        }
-    } catch (error: Exception) {
-        target.delete()
-        throw error
-    }
-    return true
 }
 
 private fun loadWallpaperScale(context: Context): Int =
