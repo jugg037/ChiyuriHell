@@ -243,6 +243,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Вырезать") },
+                                    enabled = entry.canWrite(),
                                     onClick = {
                                         actionMenuFor = null
                                         clipboardFile = entry
