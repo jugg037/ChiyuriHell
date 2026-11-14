@@ -505,6 +505,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
     var refreshKey by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
+    var fileSearch by remember { mutableStateOf("") }
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameValue by remember { mutableStateOf("") }
     var clipboardFile by remember { mutableStateOf<DocumentFile?>(null) }
@@ -525,13 +526,16 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
         runCatching { current?.listFiles()?.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { it.name?.lowercase(Locale.getDefault()) ?: "" }).orEmpty() }
             .getOrElse { emptyList() }
     }
+    val visibleEntries = entries.filter { it.name?.contains(fileSearch, ignoreCase = true) == true }
 
     Column(Modifier.fillMaxSize().padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Проводник", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable(onClick = onFocus))
             TextButton(onClick = onClose) { Text("Закрыть", color = Crimson) }
         }
+        Text("Папка: ${current?.name ?: root?.name ?: "не выбрана"} · ${entries.size} элементов", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(message, color = Muted, fontSize = 11.sp)
+        OutlinedTextField(value = fileSearch, onValueChange = { fileSearch = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("Поиск файлов") })
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
             if (folderStack.isNotEmpty()) OutlinedButton(onClick = { folderStack = folderStack.dropLast(1) }) { Text("Назад") }
@@ -539,13 +543,13 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
         if (root == null) {
             Spacer(Modifier.height(16.dp))
             Text("Android откроет системный выбор папки. Можно выбрать доступную папку во внутренней памяти или на SD-карте.", color = Muted, fontSize = 12.sp)
-        } else if (entries.isEmpty()) {
+        } else if (visibleEntries.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("Папка пуста или недоступна", color = Muted, fontSize = 12.sp)
+                Text(if (entries.isEmpty()) "Папка пуста или недоступна" else "Ничего не найдено", color = Muted, fontSize = 12.sp)
             }
         } else {
             androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                lazyListItems(entries, key = { it.uri.toString() }) { entry ->
+                lazyListItems(visibleEntries, key = { it.uri.toString() }) { entry ->
                     Row(
                         Modifier.fillMaxWidth().background(PanelSoft, RoundedCornerShape(9.dp)).clickable {
                             if (entry.isDirectory) folderStack = folderStack + entry
