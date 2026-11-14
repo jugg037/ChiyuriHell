@@ -283,6 +283,7 @@ private fun DesktopScreen() {
                     }
                     event.isCtrlPressed && event.key == Key.Spacebar -> {
                         startOpen = !startOpen
+                        if (startOpen) { if (filesOpen) filesMinimized = true; if (settingsOpen) settingsMinimized = true }
                         true
                     }
                     event.isCtrlPressed && event.isAltPressed && event.key == Key.F -> {
@@ -384,7 +385,7 @@ private fun DesktopScreen() {
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            DesktopShortcut("Приложения", Icons.Filled.Apps) { startOpen = true }
+                            DesktopShortcut("Приложения", Icons.Filled.Apps) { startOpen = true; if (filesOpen) filesMinimized = true; if (settingsOpen) settingsMinimized = true }
                             DesktopShortcut("Файлы", Icons.Filled.FolderOpen) { filesOpen = true; filesMinimized = false; if (!isWideLayout) settingsOpen = false; activePanel = "files"; startOpen = false }
                             DesktopShortcut("Оформление", Icons.Filled.Palette) { settingsOpen = true; settingsMinimized = false; if (!isWideLayout) filesOpen = false; activePanel = "settings"; startOpen = false }
                         }
@@ -616,7 +617,10 @@ private fun DesktopScreen() {
             Surface(
                 color = if (startOpen) Color(0xFF35101A) else Color.Transparent,
                 shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.size(42.dp).clickable { startOpen = !startOpen }
+                modifier = Modifier.size(42.dp).clickable {
+                    startOpen = !startOpen
+                    if (startOpen) { if (filesOpen) filesMinimized = true; if (settingsOpen) settingsMinimized = true }
+                }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text("CP", color = LocalAccent.current, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = (-1).sp)
