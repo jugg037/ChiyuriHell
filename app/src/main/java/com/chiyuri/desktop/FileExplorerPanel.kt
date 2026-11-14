@@ -102,7 +102,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         scope.launch(Dispatchers.IO) {
             val result = runCatching {
                 when (format) {
-                    "ZIP" -> extractZipArchive(context, entry, current)
+                    "ZIP" -> extractZipArchive(context, entry, current, archivePassword)
                     "7Z" -> extractSevenZArchive(context, entry, current, archivePassword)
                     else -> extractRarArchive(context, entry, current, archivePassword)
                 }
