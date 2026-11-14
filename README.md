@@ -52,9 +52,9 @@ The project is developed in `main` in feature stages. **No public release is pla
 ### Stage 0.3 — File manager
 - [x] Browse a user-selected shared-storage folder using Android's Storage Access Framework
 - [x] Open supported files with installed Android apps; create folders and delete files
-- [x] Basic file operations: create folders, rename files/folders and delete files using granted SAF permissions
+- [x] Basic file operations: create folders, rename files/folders and confirm recursive deletion using granted SAF permissions
 - [x] Copy/move files and folders recursively using SAF, with entry and size limits
-- [ ] Advanced permission/error recovery and folder deletion
+- [ ] Advanced permission/error recovery
 - [x] ZIP, RAR and 7Z extraction with entry-count and expanded-size limits
 - [x] Optional archive password field; memory caps for 7Z and RAR extraction
 - [x] Archive preview/listing before extraction
