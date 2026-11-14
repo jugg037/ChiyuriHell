@@ -1,6 +1,8 @@
 package com.chiyuri.desktop
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DesktopUtilityTest {
@@ -63,6 +65,20 @@ class DesktopUtilityTest {
         assertEquals(false, isCompleteLegacyRarPartSequence(listOf(0, 2)))
         assertEquals(false, isCompleteLegacyRarPartSequence(listOf(1, 2)))
         assertEquals(false, isCompleteLegacyRarPartSequence(emptyList()))
+    }
+
+
+    @Test
+    fun fileAndWorkspaceNamesAreValidated() {
+        assertTrue(isValidFileName("track.mp3"))
+        assertFalse(isValidFileName("../track.mp3"))
+        assertFalse(isValidFileName("""folder\track"""))
+        assertFalse(isValidFileName("a".repeat(256)))
+        assertFalse(isValidFileName("bad\u0000name"))
+        assertTrue(isValidWorkspaceName("Рабочий стол"))
+        assertFalse(isValidWorkspaceName(" "))
+        assertFalse(isValidWorkspaceName("a".repeat(25)))
+        assertFalse(isValidWorkspaceName("bad\u0000name"))
     }
 
     @Test
