@@ -42,7 +42,7 @@ jobs:
             exit 1
           fi
           for checklist in README.md FINAL_AUDIT.md; do
-            if grep -qE '^- \\[ \\]' "$checklist"; then
+            if grep -qE '^- \[ \]' "$checklist"; then
               echo "::error::Release blocked: unchecked items remain in $checklist"
               grep -nE '^- \\[ \\]' "$checklist"
               exit 1
