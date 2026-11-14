@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
 private fun ChiyuriTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = DefaultCrimson,
+            primary = DefaultLocalAccent.current,
             onPrimary = Color.White,
             background = Night,
             surface = Panel,
@@ -259,7 +259,7 @@ private fun DesktopScreen() {
         }
         Box(
             Modifier.align(Alignment.TopStart).padding(start = 28.dp, top = 26.dp)
-                .width(3.dp).height(92.dp).background(Crimson, RoundedCornerShape(4.dp))
+                .width(3.dp).height(92.dp).background(LocalAccent.current, RoundedCornerShape(4.dp))
         )
 
         Column(Modifier.fillMaxSize().padding(bottom = 58.dp)) {
@@ -270,7 +270,7 @@ private fun DesktopScreen() {
             ) {
                 Column {
                     Text("CHIYURI", color = MainText, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
-                    Text("DESKTOP", color = Crimson, fontSize = 11.sp, letterSpacing = 3.sp)
+                    Text("DESKTOP", color = LocalAccent.current, fontSize = 11.sp, letterSpacing = 3.sp)
                 }
                 Surface(color = PanelSoft, shape = RoundedCornerShape(20.dp)) {
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -293,7 +293,7 @@ private fun DesktopScreen() {
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             (0..2).forEach { index ->
                                 TextButton(onClick = { switchWorkspace(index) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
-                                    Text("Стол ${index + 1}", color = if (workspace == index) Crimson else Muted, fontSize = 10.sp)
+                                    Text("Стол ${index + 1}", color = if (workspace == index) LocalAccent.current else Muted, fontSize = 10.sp)
                                 }
                             }
                         }
@@ -330,12 +330,12 @@ private fun DesktopScreen() {
                 }
 
                 if (filesOpen) {
-                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 380.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "files") Crimson else Color(0xFF343038)), tonalElevation = 8.dp) {
+                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 380.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "files") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
                         FileExplorerPanel(context = context, onClose = { filesOpen = false }, onFocus = { activePanel = "files" })
                     }
                 }
                 if (settingsOpen) {
-                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") Crimson else Color(0xFF343038)), tonalElevation = 8.dp) {
+                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Оформление Chiyuri", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { activePanel = "settings" })
                             Text("Акцентный цвет", color = Muted, fontSize = 12.sp)
@@ -361,7 +361,7 @@ private fun DesktopScreen() {
                                     RadioButton(selected = wallpaperScale == index, onClick = {
                                         wallpaperScale = index
                                         saveWallpaperScale(context, index)
-                                    }, colors = RadioButtonDefaults.colors(selectedColor = Crimson))
+                                    }, colors = RadioButtonDefaults.colors(selectedColor = LocalAccent.current))
                                     Text(label, color = MainText, fontSize = 12.sp)
                                 }
                             }
@@ -369,14 +369,14 @@ private fun DesktopScreen() {
                             if (wallpaperUri != null) TextButton(onClick = {
                                 wallpaperUri = null
                                 context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().remove("wallpaper_uri").apply()
-                            }) { Text("Убрать изображение", color = Crimson) }
+                            }) { Text("Убрать изображение", color = LocalAccent.current) }
                             listOf("Кровавый градиент", "Чёрный", "Багровое свечение").forEachIndexed { index, label ->
                                 Row(Modifier.fillMaxWidth().background(if (wallpaperStyle == index) Color(0xFF35101A) else PanelSoft, RoundedCornerShape(10.dp)).clickable {
                                     wallpaperStyle = index
                                     saveWallpaperStyle(context, index)
                                 }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text(label, color = MainText, modifier = Modifier.weight(1f), fontSize = 13.sp)
-                                    if (wallpaperStyle == index) Text("✓", color = Crimson)
+                                    if (wallpaperStyle == index) Text("✓", color = LocalAccent.current)
                                 }
                             }
                             Text("Сведения об устройстве", color = Muted, fontSize = 12.sp)
@@ -388,9 +388,9 @@ private fun DesktopScreen() {
                             Text("Раздел данных: ${storageSummary()}", color = MainText, fontSize = 11.sp)
                             Text("Сеть: ${if (networkAvailable(context)) "подключена" else "нет подключения"}", color = MainText, fontSize = 11.sp)
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
-                            TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = Crimson) }
+                            TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = LocalAccent.current) }
                             Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { settingsOpen = false }) { Text("Закрыть", color = Crimson) }
+                            TextButton(onClick = { settingsOpen = false }) { Text("Закрыть", color = LocalAccent.current) }
                         }
                     }
                 }
@@ -415,7 +415,7 @@ private fun DesktopScreen() {
                                     onValueChange = { search = it },
                                     singleLine = true,
                                     textStyle = androidx.compose.ui.text.TextStyle(color = MainText, fontSize = 14.sp),
-                                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Crimson),
+                                    cursorBrush = androidx.compose.ui.graphics.SolidColor(LocalAccent.current),
                                     decorationBox = { inner ->
                                         Box {
                                             if (search.isEmpty()) Text("Поиск приложений", color = Muted, fontSize = 14.sp)
@@ -477,7 +477,7 @@ private fun DesktopScreen() {
                                 }
                             }
                             TextButton(onClick = { startOpen = false; search = "" }) {
-                                Text("Закрыть", color = Crimson)
+                                Text("Закрыть", color = LocalAccent.current)
                             }
                         }
                     }
@@ -496,7 +496,7 @@ private fun DesktopScreen() {
                 modifier = Modifier.size(42.dp).clickable { startOpen = !startOpen }
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text("C", color = Crimson, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text("C", color = LocalAccent.current, fontSize = 25.sp, fontWeight = FontWeight.Black)
                 }
             }
             Spacer(Modifier.width(8.dp))
@@ -504,9 +504,9 @@ private fun DesktopScreen() {
                 Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("▤", color = if (filesOpen && activePanel == "files") Crimson else MainText, fontSize = 20.sp,
+                Text("▤", color = if (filesOpen && activePanel == "files") LocalAccent.current else MainText, fontSize = 20.sp,
                     modifier = Modifier.clickable { filesOpen = true; if (!isWideLayout) settingsOpen = false; activePanel = "files" }.padding(horizontal = 9.dp, vertical = 8.dp))
-                Text("⚙", color = if (settingsOpen && activePanel == "settings") Crimson else MainText, fontSize = 18.sp,
+                Text("⚙", color = if (settingsOpen && activePanel == "settings") LocalAccent.current else MainText, fontSize = 18.sp,
                     modifier = Modifier.clickable { settingsOpen = true; if (!isWideLayout) filesOpen = false; activePanel = "settings" }.padding(horizontal = 9.dp, vertical = 8.dp))
                 pinnedApps.forEach { app ->
                     Box(
@@ -541,7 +541,7 @@ private fun DesktopShortcut(label: String, icon: androidx.compose.ui.graphics.ve
             .clickable(onClick = onClick).padding(vertical = 13.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(icon, null, tint = Crimson, modifier = Modifier.size(25.dp))
+        Icon(icon, null, tint = LocalAccent.current, modifier = Modifier.size(25.dp))
         Spacer(Modifier.height(7.dp))
         Text(label, color = MainText, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -570,10 +570,10 @@ private fun AppTile(
         Spacer(Modifier.height(6.dp))
         Text(app.label, color = MainText, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (pinned) "На панели" else "Закрепить", color = if (pinned) Crimson else Muted, fontSize = 8.sp)
+            Text(if (pinned) "На панели" else "Закрепить", color = if (pinned) LocalAccent.current else Muted, fontSize = 8.sp)
             Text("·", color = Muted, fontSize = 8.sp)
             TextButton(onClick = onDesktopToggle, contentPadding = PaddingValues(0.dp)) {
-                Text(if (desktopShortcut) "Убрать ярлык" else "+ На стол", color = if (desktopShortcut) Crimson else Muted, fontSize = 8.sp)
+                Text(if (desktopShortcut) "Убрать ярлык" else "+ На стол", color = if (desktopShortcut) LocalAccent.current else Muted, fontSize = 8.sp)
             }
         }
         TextButton(onClick = onAdjacentClick, contentPadding = PaddingValues(0.dp)) {
@@ -654,7 +654,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
     Column(Modifier.fillMaxSize().padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Проводник", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable(onClick = onFocus))
-            TextButton(onClick = onClose) { Text("Закрыть", color = Crimson) }
+            TextButton(onClick = onClose) { Text("Закрыть", color = LocalAccent.current) }
         }
         Text("Папка: ${current?.name ?: root?.name ?: "не выбрана"} · ${entries.size} элементов", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(message, color = Muted, fontSize = 11.sp)
@@ -687,7 +687,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                         }.padding(horizontal = 10.dp, vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(if (entry.isDirectory) "▰" else "▤", color = Crimson, modifier = Modifier.padding(end = 9.dp))
+                        Text(if (entry.isDirectory) "▰" else "▤", color = LocalAccent.current, modifier = Modifier.padding(end = 9.dp))
                         Column(Modifier.weight(1f)) {
                             Text(entry.name ?: "Без названия", color = MainText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
@@ -705,17 +705,17 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                             }
                             when {
                                 entry.name?.endsWith(".zip", ignoreCase = true) == true ->
-                                    TextButton(onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = Crimson, fontSize = 10.sp) }
+                                    TextButton(onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = LocalAccent.current, fontSize = 10.sp) }
                                 entry.name?.endsWith(".7z", ignoreCase = true) == true ->
-                                    TextButton(onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = Crimson, fontSize = 10.sp) }
+                                    TextButton(onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = LocalAccent.current, fontSize = 10.sp) }
                                 entry.name?.endsWith(".rar", ignoreCase = true) == true ->
-                                    TextButton(onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = Crimson, fontSize = 10.sp) }
+                                    TextButton(onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = LocalAccent.current, fontSize = 10.sp) }
                             }
                             TextButton(onClick = {
                                 val deleted = runCatching { entry.delete() }.getOrDefault(false)
                                 message = if (deleted) "Файл удалён" else "Не удалось удалить файл"
                                 if (deleted) refreshKey++
-                            }) { Text("Удалить", color = Crimson, fontSize = 10.sp) }
+                            }) { Text("Удалить", color = LocalAccent.current, fontSize = 10.sp) }
                         }
                     }
                 }
@@ -727,7 +727,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                     val created = runCatching { current?.createDirectory("Новая папка") != null }.getOrDefault(false)
                     message = if (created) "Папка создана" else "Не удалось создать папку"
                     if (created) refreshKey++
-                }) { Text("＋ Новая папка", color = Crimson) }
+                }) { Text("＋ Новая папка", color = LocalAccent.current) }
                 Spacer(Modifier.weight(1f))
                 TextButton(enabled = clipboardFile != null, onClick = {
                     val source = clipboardFile
@@ -749,7 +749,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                             }
                         }
                     }
-                }) { Text("Вставить", color = Crimson) }
+                }) { Text("Вставить", color = LocalAccent.current) }
             }
         }
         if (renameTarget != null) {
@@ -766,7 +766,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                         message = if (renamed) "Имя изменено" else "Не удалось переименовать"
                         if (renamed) refreshKey++
                         renameTarget = null
-                    }) { Text("Сохранить", color = Crimson) }
+                    }) { Text("Сохранить", color = LocalAccent.current) }
                 },
                 dismissButton = { TextButton(onClick = { renameTarget = null }) { Text("Отмена") } }
             )
