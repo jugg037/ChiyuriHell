@@ -207,6 +207,7 @@ private fun DesktopScreen() {
     }
 
     CompositionLocalProvider(LocalAccent provides accentColor(accentStyle)) {
+    MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = LocalAccent.current, secondary = LocalAccent.current)) {
     Box(
         Modifier.fillMaxSize().background(Night).focusRequester(focusRequester).focusable()
             .onPreviewKeyEvent { event ->
@@ -563,6 +564,7 @@ private fun DesktopScreen() {
                 Text(date, color = Muted, fontSize = 9.sp)
             }
         }
+    }
     }
     }
 }
