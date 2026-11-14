@@ -177,8 +177,9 @@ private fun DesktopScreen() {
             context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putString("wallpaper_uri", uri.toString()).apply()
         }
     }
-    val wallpaperBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, wallpaperUri) {
-        value = withContext(Dispatchers.IO) {
+    var wallpaperBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    LaunchedEffect(wallpaperUri) {
+        wallpaperBitmap = withContext(Dispatchers.IO) {
             wallpaperUri?.let { saved -> runCatching { decodeWallpaper(context, saved) }.getOrNull() }
         }
     }
