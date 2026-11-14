@@ -114,7 +114,7 @@ private fun ChiyuriTheme(content: @Composable () -> Unit) {
 @Composable
 private fun DesktopScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val isWideLayout = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 700
+    val isWideLayout = isWideDesktop(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp)
     var apps by remember { mutableStateOf(loadApps(context)) }
     var pinnedPackages by remember { mutableStateOf(loadPinnedPackages(context, apps)) }
     var workspace by remember { mutableIntStateOf(loadWorkspace(context)) }
