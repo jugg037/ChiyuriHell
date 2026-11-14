@@ -24,8 +24,10 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Persistent taskbar app pinning and unpinning
 - [ ] Taskbar polish, active-app indication and app switching
 - [x] Desktop shortcuts and shortcut management
-- [ ] File explorer entry point and core navigation
+- [x] File explorer entry point and folder navigation via Android Storage Access Framework
 - [ ] Wallpaper selection, scaling and theme customization
+  - [x] Custom image wallpaper and three built-in dark/crimson background presets
+  - [ ] Wallpaper scaling modes (fit/fill/tile)
 - [ ] Reliable status indicators and orientation/layout polish
 
 ### Stage 0.2 — Multitasking
@@ -36,7 +38,8 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Clearly report Android/firmware limitations rather than simulate unsupported OS-level window control
 
 ### Stage 0.3 — File manager
-- [ ] Browse shared storage using Android's Storage Access Framework
+- [x] Browse a user-selected shared-storage folder using Android's Storage Access Framework
+- [x] Open supported files with installed Android apps; create folders and delete files
 - [ ] File operations with Android permission handling
 - [ ] Archive browsing and extraction for ZIP, RAR and 7Z where compatible libraries and licenses permit
 - [ ] Error handling for inaccessible, protected and unsupported files
