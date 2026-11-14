@@ -355,7 +355,7 @@ private fun DesktopScreen() {
                 horizontalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
-                    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Text("Рабочий стол ${workspace + 1}", color = MainText, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             (0..2).forEach { index ->
@@ -370,15 +370,18 @@ private fun DesktopScreen() {
                         if (desktopApps.isEmpty()) {
                             Text("Здесь пока пусто. Удерживай приложение в меню «Пуск», чтобы добавить ярлык.", color = Muted, fontSize = 11.sp)
                         } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                desktopApps.chunked(4).forEach { rowApps ->
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        rowApps.forEach { app ->
-                                            DesktopAppShortcut(
-                                                app = app,
-                                                onClick = { openApp(app) },
-                                                onLongClick = { toggleDesktopShortcut(app) }
-                                            )
+                            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                                val shortcutColumns = (maxWidth / 80.dp).toInt().coerceIn(1, 4)
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    desktopApps.chunked(shortcutColumns).forEach { rowApps ->
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            rowApps.forEach { app ->
+                                                DesktopAppShortcut(
+                                                    app = app,
+                                                    onClick = { openApp(app) },
+                                                    onLongClick = { toggleDesktopShortcut(app) }
+                                                )
+                                            }
                                         }
                                     }
                                 }
