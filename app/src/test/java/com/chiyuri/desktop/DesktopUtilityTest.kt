@@ -45,7 +45,7 @@ class DesktopUtilityTest {
     fun legacyRarVolumeSequenceStartsAtR00AndHasNoGaps() {
         assertEquals(true, isCompleteLegacyRarPartSequence(listOf(0)))
         assertEquals(true, isCompleteLegacyRarPartSequence(listOf(0, 1, 2)))
-        assertEquals(true, isCompleteLegacyRarPartSequence(listOf(0, 99, 100)))
+        assertEquals(true, isCompleteLegacyRarPartSequence((0..100).toList()))
         assertEquals(false, isCompleteLegacyRarPartSequence(listOf(0, 2)))
         assertEquals(false, isCompleteLegacyRarPartSequence(listOf(1, 2)))
         assertEquals(false, isCompleteLegacyRarPartSequence(emptyList()))
