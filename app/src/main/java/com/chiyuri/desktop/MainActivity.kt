@@ -167,7 +167,16 @@ private fun DesktopScreen() {
     LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
     LaunchedEffect(startOpen) {
-        if (startOpen) apps = loadApps(context)
+        if (startOpen) {
+            val refreshed = loadApps(context)
+            apps = refreshed
+            val installedPackages = refreshed.map { it.packageName }.toSet()
+            val validPins = pinnedPackages.filter { it in installedPackages }
+            if (validPins != pinnedPackages) {
+                pinnedPackages = validPins
+                savePinnedPackages(context, validPins)
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -213,7 +222,7 @@ private fun DesktopScreen() {
         }
     }
 
-    val visibleApps = apps.filter { it.label.contains(search, ignoreCase = true) }
+    val visibleApps = apps.filter { it.label.contains(search, ignoreCase = true) || it.packageName.contains(search, ignoreCase = true) }
     val pinnedApps = pinnedPackages.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }
 
     fun togglePin(app: LaunchApp) {
@@ -781,7 +790,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize:
         OutlinedTextField(value = archivePassword, onValueChange = { archivePassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), label = { Text("Пароль архива (если нужен)") })
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
-            if (folderStack.isNotEmpty()) OutlinedButton(onClick = { folderStack = folderStack.dropLast(1) }) { Text("Назад") }
+            if (folderStack.isNotEmpty()) OutlinedButton(onClick = { folderStack = folderStack.dropLast(1); fileSearch = "" }) { Text("Назад") }
         }
         if (root == null) {
             Spacer(Modifier.height(16.dp))
@@ -795,7 +804,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize:
                 lazyListItems(visibleEntries, key = { it.uri.toString() }) { entry ->
                     Row(
                         Modifier.fillMaxWidth().background(PanelSoft, RoundedCornerShape(9.dp)).clickable {
-                            if (entry.isDirectory) folderStack = folderStack + entry
+                            if (entry.isDirectory) { folderStack = folderStack + entry; fileSearch = "" }
                             else runCatching {
                                 val intent = Intent(Intent.ACTION_VIEW).apply {
                                     setDataAndType(entry.uri, entry.type ?: "*/*")
