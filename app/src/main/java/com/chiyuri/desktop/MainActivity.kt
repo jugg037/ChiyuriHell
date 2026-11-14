@@ -133,6 +133,8 @@ private fun DesktopScreen() {
     var showBatteryPercent by remember { mutableStateOf(loadDesktopPreference(context, "show_battery_percent", true)) }
     var showTaskbarDate by remember { mutableStateOf(loadDesktopPreference(context, "show_taskbar_date", true)) }
     var appTileSize by remember { mutableFloatStateOf(loadDesktopIntPreference(context, "app_tile_size", 76).toFloat()) }
+    var panelWidth by remember { mutableFloatStateOf(loadDesktopIntPreference(context, "panel_width", 320).toFloat()) }
+    val effectivePanelWidth = if (isWideLayout) panelWidth.coerceIn(260f, 420f) else panelWidth.coerceIn(245f, 300f)
     var rootStatus by remember { mutableStateOf("Не проверено") }
     var rootChecking by remember { mutableStateOf(false) }
     var usageAccessGranted by remember { mutableStateOf(hasUsageAccess(context)) }
@@ -394,12 +396,12 @@ private fun DesktopScreen() {
                 }
 
                 if (filesOpen) {
-                    Surface(modifier = if (filesMinimized) Modifier.size(0.dp) else Modifier.widthIn(min = 245.dp, max = 380.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "files") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
+                    Surface(modifier = if (filesMinimized) Modifier.size(0.dp) else Modifier.width(effectivePanelWidth.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "files") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
                         FileExplorerPanel(context = context, onClose = { filesOpen = false; filesMinimized = false }, onMinimize = { filesMinimized = true }, onFocus = { activePanel = "files" })
                     }
                 }
                 if (settingsOpen) {
-                    Surface(modifier = if (settingsMinimized) Modifier.size(0.dp) else Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
+                    Surface(modifier = if (settingsMinimized) Modifier.size(0.dp) else Modifier.width(effectivePanelWidth.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
                         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Оформление Chiyuri", color = MainText, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable { activePanel = "settings" })
@@ -421,6 +423,14 @@ private fun DesktopScreen() {
                                 })
                                 Text("Дата в панели задач", color = MainText, fontSize = 11.sp)
                             }
+                            Text("Ширина оконных панелей: ${effectivePanelWidth.toInt()} dp", color = Muted, fontSize = 12.sp)
+                            Slider(
+                                value = panelWidth,
+                                onValueChange = { panelWidth = it },
+                                onValueChangeFinished = { saveDesktopIntPreference(context, "panel_width", panelWidth.toInt()) },
+                                valueRange = 260f..420f,
+                                steps = 7
+                            )
                             Text("Размер плиток приложений: ${appTileSize.toInt()} dp", color = Muted, fontSize = 12.sp)
                             Slider(
                                 value = appTileSize,
