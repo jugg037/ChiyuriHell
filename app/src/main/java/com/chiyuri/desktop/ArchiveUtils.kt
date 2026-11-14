@@ -8,7 +8,7 @@ import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
-import java.util.zip.ZipInputStream
+import net.lingala.zip4j.ZipFile as Zip4jFile
 
 private class LimitedOutputStream(
     private val target: OutputStream,
@@ -30,6 +30,30 @@ private class LimitedOutputStream(
     }
 
     override fun flush() = target.flush()
+}
+
+private fun copyArchiveToTemp(context: Context, archive: DocumentFile, prefix: String, suffix: String): File {
+    val tempFile = File.createTempFile(prefix, suffix, context.cacheDir)
+    try {
+        context.contentResolver.openInputStream(archive.uri).use { input ->
+            requireNotNull(input) { "Не удалось прочитать архив" }
+            tempFile.outputStream().use { output ->
+                val buffer = ByteArray(8192)
+                var total = 0L
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    if (total > 512L * 1024L * 1024L) throw IOException("Архив больше 512 МБ")
+                    output.write(buffer, 0, count)
+                }
+            }
+        }
+        return tempFile
+    } catch (error: Exception) {
+        tempFile.delete()
+        throw error
+    }
 }
 
 internal fun safeArchiveEntryName(rawName: String): String =
@@ -140,67 +164,59 @@ internal fun extractRarArchive(context: Context, archiveFile: DocumentFile, dest
     return extracted
 }
 
-internal fun extractZipArchive(context: Context, archive: DocumentFile, destination: DocumentFile?): Int {
+internal fun extractZipArchive(context: Context, archive: DocumentFile, destination: DocumentFile?, password: String): Int {
     require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
-    var extracted = 0
-    var processedEntries = 0
-    var totalBytes = 0L
-    context.contentResolver.openInputStream(archive.uri).use { raw ->
-        requireNotNull(raw) { "Не удалось прочитать ZIP-архив" }
-        ZipInputStream(raw).use { zip ->
-            var item = zip.nextEntry
-            while (item != null) {
-                processedEntries++
-                if (processedEntries > 1000) throw IOException("В архиве больше 1000 элементов")
-                if (!item.isDirectory) {
-                    val safeName = item.name.substringAfterLast('/').substringAfterLast('\\').trim()
-                    if (safeName.isNotBlank() && safeName != "." && safeName != "..") {
-                        if (destination.findFile(safeName) == null) {
-                            val output = destination.createFile("application/octet-stream", safeName)
-                            if (output != null) {
-                                try {
-                                    context.contentResolver.openOutputStream(output.uri).use { stream ->
-                                        requireNotNull(stream) { "Не удалось создать файл: $safeName" }
-                                        val buffer = ByteArray(8192)
-                                        while (true) {
-                                            val count = zip.read(buffer)
-                                            if (count < 0) break
-                                            totalBytes += count
-                                            if (totalBytes > 256L * 1024L * 1024L) throw IOException("Превышен лимит распаковки 256 МБ")
-                                            stream.write(buffer, 0, count)
-                                        }
-                                    }
-                                    extracted++
-                                } catch (error: Exception) {
-                                    output.delete()
-                                    throw error
+    val tempFile = copyArchiveToTemp(context, archive, "chiyuri-zip-", ".zip")
+    try {
+        val zip = if (password.isEmpty()) Zip4jFile(tempFile) else Zip4jFile(tempFile, password.toCharArray())
+        if (zip.isEncrypted() && password.isEmpty()) throw IOException("ZIP-архив защищён паролем")
+        val headers = zip.getFileHeaders()
+        if (headers.size > 1000) throw IOException("В архиве больше 1000 элементов")
+        var extracted = 0
+        var totalBytes = 0L
+        headers.forEach { header ->
+            if (!header.isDirectory) {
+                val safeName = safeArchiveEntryName(header.fileName)
+                if (safeName.isNotBlank() && safeName != "." && safeName != ".." && destination.findFile(safeName) == null) {
+                    val target = destination.createFile("application/octet-stream", safeName)
+                    if (target != null) {
+                        try {
+                            zip.getInputStream(header).use { input ->
+                                context.contentResolver.openOutputStream(target.uri).use { output ->
+                                    requireNotNull(output) { "Не удалось создать файл: $safeName" }
+                                    val bounded = LimitedOutputStream(output, 256L * 1024L * 1024L - totalBytes)
+                                    input.copyTo(bounded)
+                                    totalBytes += bounded.bytesWritten
                                 }
                             }
+                            extracted++
+                        } catch (error: Exception) {
+                            target.delete()
+                            throw error
                         }
                     }
                 }
-                zip.closeEntry()
-                item = zip.nextEntry
             }
         }
+        return extracted
+    } finally {
+        tempFile.delete()
     }
-    return extracted
 }
 
 internal fun listArchiveEntries(context: Context, archive: DocumentFile, format: String, password: String): List<String> {
     val names = mutableListOf<String>()
     when (format) {
         "ZIP" -> {
-            context.contentResolver.openInputStream(archive.uri).use { input ->
-                requireNotNull(input) { "Не удалось прочитать ZIP-архив" }
-                ZipInputStream(input).use { zip ->
-                    var entry = zip.nextEntry
-                    while (entry != null && names.size < 1000) {
-                        names += (if (entry.isDirectory) "📁 " else "📄 ") + entry.name
-                        zip.closeEntry()
-                        entry = zip.nextEntry
-                    }
+            val tempFile = copyArchiveToTemp(context, archive, "chiyuri-list-", ".zip")
+            try {
+                val zip = if (password.isEmpty()) Zip4jFile(tempFile) else Zip4jFile(tempFile, password.toCharArray())
+                if (zip.isEncrypted() && password.isEmpty()) throw IOException("ZIP-архив защищён паролем")
+                zip.getFileHeaders().take(1000).forEach { header ->
+                    names += (if (header.isDirectory) "📁 " else "📄 ") + header.fileName
                 }
+            } finally {
+                tempFile.delete()
             }
         }
         "7Z" -> {
