@@ -600,18 +600,6 @@ private fun DesktopScreen() {
                                 )
                             }
                             Spacer(Modifier.height(10.dp))
-                            val recentApps = apps.filter { it.packageName in recentPackages }
-                            if (recentApps.isNotEmpty()) {
-                                Text("Недавно запускались", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
-                                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    recentApps.forEach { recent ->
-                                        Text(recent.label, color = MainText, fontSize = 10.sp,
-                                            modifier = Modifier.background(PanelSoft, RoundedCornerShape(8.dp)).clickable {
-                                                openApp(recent); startOpen = false; search = ""
-                                            }.padding(horizontal = 8.dp, vertical = 6.dp), maxLines = 1)
-                                    }
-                                }
-                            }
                             if (recentApps.isNotEmpty()) {
                                 Text("Недавние", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
                                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
