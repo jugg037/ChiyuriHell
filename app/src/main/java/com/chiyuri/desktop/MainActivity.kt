@@ -112,7 +112,8 @@ private fun DesktopScreen() {
     val isWideLayout = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 700
     var apps by remember { mutableStateOf(loadApps(context)) }
     var pinnedPackages by remember { mutableStateOf(loadPinnedPackages(context, apps)) }
-    var desktopPackages by remember { mutableStateOf(loadDesktopPackages(context)) }
+    var workspace by remember { mutableIntStateOf(loadWorkspace(context)) }
+    var desktopPackages by remember { mutableStateOf(loadDesktopPackages(context, workspace)) }
     var startOpen by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var clock by remember { mutableStateOf(nowTime()) }
@@ -177,11 +178,17 @@ private fun DesktopScreen() {
         launchAppAdjacent(context, app)
     }
 
+    fun switchWorkspace(index: Int) {
+        workspace = index.coerceIn(0, 2)
+        desktopPackages = loadDesktopPackages(context, workspace)
+        context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putInt("active_workspace", workspace).apply()
+    }
+
     fun toggleDesktopShortcut(app: LaunchApp) {
         val updated = if (app.packageName in desktopPackages) desktopPackages - app.packageName
             else desktopPackages + app.packageName
         desktopPackages = updated
-        saveDesktopPackages(context, updated)
+        saveDesktopPackages(context, workspace, updated)
     }
 
     Box(
@@ -261,7 +268,14 @@ private fun DesktopScreen() {
             ) {
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                        Text("Рабочий стол", color = MainText, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Рабочий стол ${workspace + 1}", color = MainText, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            (0..2).forEach { index ->
+                                TextButton(onClick = { switchWorkspace(index) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
+                                    Text("Стол ${index + 1}", color = if (workspace == index) Crimson else Muted, fontSize = 10.sp)
+                                }
+                            }
+                        }
                         Text("Твоя система. Твои правила.", color = Muted, fontSize = 13.sp)
                         Text("Ярлыки рабочего стола", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
                         val desktopApps = apps.filter { it.packageName in desktopPackages }
@@ -861,13 +875,18 @@ private fun savePinnedPackages(context: Context, packages: Set<String>) {
         .edit().putStringSet("pinned_packages", packages.toSet()).apply()
 }
 
-private fun loadDesktopPackages(context: Context): Set<String> =
-    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
-        .getStringSet("desktop_shortcuts", emptySet())?.toSet() ?: emptySet()
+private fun loadWorkspace(context: Context): Int = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("active_workspace", 0).coerceIn(0, 2)
 
-private fun saveDesktopPackages(context: Context, packages: Set<String>) {
+private fun loadDesktopPackages(context: Context, workspace: Int): Set<String> {
+    val prefs = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
+    val key = "desktop_shortcuts_$workspace"
+    if (workspace == 0 && !prefs.contains(key)) return prefs.getStringSet("desktop_shortcuts", emptySet())?.toSet() ?: emptySet()
+    return prefs.getStringSet(key, emptySet())?.toSet() ?: emptySet()
+}
+
+private fun saveDesktopPackages(context: Context, workspace: Int, packages: Set<String>) {
     context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
-        .edit().putStringSet("desktop_shortcuts", packages.toSet()).apply()
+        .edit().putStringSet("desktop_shortcuts_$workspace", packages.toSet()).apply()
 }
 
 private fun launchApp(context: Context, app: LaunchApp) {
