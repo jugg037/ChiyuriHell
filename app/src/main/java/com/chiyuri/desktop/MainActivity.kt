@@ -151,9 +151,7 @@ private fun DesktopScreen() {
     }
     val wallpaperBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, wallpaperUri) {
         value = withContext(Dispatchers.IO) {
-            wallpaperUri?.let { saved -> runCatching {
-                context.contentResolver.openInputStream(Uri.parse(saved))?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
-            }.getOrNull() }
+            wallpaperUri?.let { saved -> runCatching { decodeWallpaper(context, saved) }.getOrNull() }
         }
     }
 
@@ -1131,6 +1129,24 @@ private fun accentColor(style: Int): Color = when (style) {
     1 -> Color(0xFF9E1235)
     2 -> Color(0xFFFF304F)
     else -> DefaultCrimson
+}
+
+private fun decodeWallpaper(context: Context, savedUri: String): androidx.compose.ui.graphics.ImageBitmap? {
+    val uri = Uri.parse(savedUri)
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    context.contentResolver.openInputStream(uri).use { input ->
+        requireNotNull(input) { "Не удалось открыть изображение" }
+        BitmapFactory.decodeStream(input, null, bounds)
+    }
+    val targetWidth = context.resources.displayMetrics.widthPixels.coerceAtLeast(1) * 2
+    val targetHeight = context.resources.displayMetrics.heightPixels.coerceAtLeast(1) * 2
+    var sample = 1
+    while (bounds.outWidth / sample > targetWidth || bounds.outHeight / sample > targetHeight) sample *= 2
+    val options = BitmapFactory.Options().apply { inSampleSize = sample }
+    return context.contentResolver.openInputStream(uri).use { input ->
+        requireNotNull(input) { "Не удалось открыть изображение повторно" }
+        BitmapFactory.decodeStream(input, null, options)?.asImageBitmap()
+    }
 }
 
 private fun loadWallpaperUri(context: Context): String? =
