@@ -99,6 +99,9 @@ jobs:
           fi
           BADGING="$("$AAPT" dump badging app/build/outputs/apk/debug/app-debug.apk)"
           echo "$BADGING" | grep -F "package: name='com.chiyuri.desktop'" >/dev/null
+          EXPECTED_NAME="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
+          EXPECTED_CODE="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
+          echo "$BADGING" | grep -F "versionCode='$EXPECTED_CODE' versionName='$EXPECTED_NAME'" >/dev/null
 
       - name: Prepare checksum
         shell: bash
