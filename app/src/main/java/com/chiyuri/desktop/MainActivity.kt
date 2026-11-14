@@ -120,6 +120,7 @@ private fun DesktopScreen() {
     var workspaceNames by remember { mutableStateOf(loadWorkspaceNames(context)) }
     var renameWorkspaceIndex by remember { mutableStateOf<Int?>(null) }
     var workspaceNameDraft by remember { mutableStateOf("") }
+    var workspaceNameError by remember { mutableStateOf<String?>(null) }
     var desktopPackages by remember { mutableStateOf(loadDesktopPackages(context, workspace)) }
     var startOpen by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
@@ -381,6 +382,7 @@ private fun DesktopScreen() {
                                         onClick = { switchWorkspace(index) },
                                         onLongClick = {
                                             workspaceNameDraft = workspaceNames[index]
+                                            workspaceNameError = null
                                             renameWorkspaceIndex = index
                                         }
                                     )
@@ -735,7 +737,7 @@ private fun DesktopScreen() {
                 onDismissRequest = { renameWorkspaceIndex = null },
                 title = { Text("Переименовать рабочий стол") },
                 text = {
-                    OutlinedTextField(value = workspaceNameDraft, onValueChange = { workspaceNameDraft = it }, singleLine = true, label = { Text("Название") })
+                    OutlinedTextField(value = workspaceNameDraft, onValueChange = { workspaceNameDraft = it; workspaceNameError = null }, isError = workspaceNameError != null, singleLine = true, label = { Text("Название") }, supportingText = { workspaceNameError?.let { Text(it) } })
                 },
                 confirmButton = {
                     TextButton(onClick = {
@@ -745,11 +747,14 @@ private fun DesktopScreen() {
                         if (index != null && validName) {
                             saveWorkspaceName(context, index, cleanName)
                             workspaceNames = loadWorkspaceNames(context)
+                            renameWorkspaceIndex = null
+                            workspaceNameError = null
+                        } else {
+                            workspaceNameError = "Введите название до 24 символов без управляющих знаков"
                         }
-                        renameWorkspaceIndex = null
                     }) { Text("Сохранить", color = LocalAccent.current) }
                 },
-                dismissButton = { TextButton(onClick = { renameWorkspaceIndex = null }) { Text("Отмена") } }
+                dismissButton = { TextButton(onClick = { renameWorkspaceIndex = null; workspaceNameError = null }) { Text("Отмена") } }
             )
         }
     }
