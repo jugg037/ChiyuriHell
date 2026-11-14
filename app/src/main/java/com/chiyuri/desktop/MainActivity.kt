@@ -373,7 +373,7 @@ private fun DesktopScreen() {
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Text("Рабочий стол: ${workspaceNames[workspace]}", color = MainText, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             (0..2).forEach { index ->
                                 Surface(
                                     color = if (workspace == index) Color(0xFF35101A) else PanelSoft,
