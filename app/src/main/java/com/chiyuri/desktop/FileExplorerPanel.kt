@@ -41,6 +41,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     var fileSearch by remember { mutableStateOf("") }
     var archivePassword by remember { mutableStateOf("") }
     var archivePreview by remember { mutableStateOf<String?>(null) }
+    var deleteTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameValue by remember { mutableStateOf("") }
     var clipboardFile by remember { mutableStateOf<DocumentFile?>(null) }
@@ -171,11 +172,9 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                                     TextButton(enabled = current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = LocalAccent.current, fontSize = 10.sp) }
                                 }
                             }
-                            TextButton(enabled = current?.canWrite() == true, onClick = {
-                                val deleted = runCatching { entry.delete() }.getOrDefault(false)
-                                message = if (deleted) "Файл удалён" else "Не удалось удалить файл"
-                                if (deleted) refreshKey++
-                            }) { Text("Удалить", color = LocalAccent.current, fontSize = 10.sp) }
+                        }
+                        TextButton(enabled = current?.canWrite() == true, onClick = { deleteTarget = entry }) {
+                            Text("Удалить", color = LocalAccent.current, fontSize = 10.sp)
                         }
                     }
                 }
@@ -197,7 +196,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                         scope.launch(Dispatchers.IO) {
                             val result = runCatching {
                                 val copied = copyDocumentEntry(context, source, destination)
-                                if (copied && clipboardMove && !source.delete()) throw IOException("Копия создана, но исходный файл удалить не удалось")
+                                if (copied && clipboardMove && !deleteDocumentEntry(source)) throw IOException("Копия создана, но исходный элемент удалить не удалось")
                                 copied
                             }
                             withContext(Dispatchers.Main) {
@@ -211,6 +210,29 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                     }
                 }) { Text("Вставить", color = LocalAccent.current) }
             }
+        }
+        if (deleteTarget != null) {
+            val target = deleteTarget
+            AlertDialog(
+                onDismissRequest = { deleteTarget = null },
+                title = { Text("Удалить элемент?") },
+                text = { Text(if (target?.isDirectory == true) "Папка и всё её содержимое будут удалены без возможности восстановления." else "Файл будет удалён без возможности восстановления.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (target != null) {
+                            scope.launch(Dispatchers.IO) {
+                                val result = runCatching { deleteDocumentEntry(target) }
+                                withContext(Dispatchers.Main) {
+                                    message = result.fold({ if (it) "Элемент удалён" else "Не удалось удалить элемент" }, { "Ошибка удаления: ${it.localizedMessage}" })
+                                    if (result.getOrDefault(false)) refreshKey++
+                                    deleteTarget = null
+                                }
+                            }
+                        }
+                    }) { Text("Удалить", color = LocalAccent.current) }
+                },
+                dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Отмена") } }
+            )
         }
         if (archivePreview != null) {
             AlertDialog(
@@ -247,6 +269,15 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
             )
         }
     }
+}
+
+private fun deleteDocumentEntry(entry: DocumentFile): Boolean {
+    if (entry.isDirectory) {
+        entry.listFiles().forEach { child ->
+            if (!deleteDocumentEntry(child)) throw IOException("Не удалось удалить ${child.name ?: "элемент"}")
+        }
+    }
+    return entry.delete()
 }
 
 private data class CopyBudget(var entries: Int = 0, var bytes: Long = 0L)
