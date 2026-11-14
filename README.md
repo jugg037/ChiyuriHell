@@ -24,13 +24,13 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Desktop, Start menu, app search and Android app launching
 - [x] Persistent taskbar app pinning and unpinning
 - [x] Ordered taskbar pins with left/right reordering from the Start menu
-- [ ] Taskbar polish and true foreground-app indication (Android background/foreground restrictions apply)
+- [x] Taskbar foreground-app indication (optional Usage Access permission)
   - [x] Optional real foreground detection after the user grants Usage Access
   - [x] Recent launch history and last-launched marker
   - [x] Adjacent/split-screen launch request for apps on supported Android/Samsung configurations
 - [x] Desktop shortcuts and shortcut management
 - [x] File explorer entry point and folder navigation via Android Storage Access Framework
-- [ ] Wallpaper selection, scaling and theme customization
+- [x] Wallpaper selection, scaling and theme customization
   - [x] Custom image wallpaper and three built-in dark/crimson background presets
   - [x] Wallpaper scaling modes (fill/fit/stretch)
   - [x] Selectable blood-red, burgundy and scarlet accent colors
@@ -64,7 +64,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 
 ### Stage 0.5 — System tools and advanced settings
 - [x] Basic device dashboard (model, Android version, available RAM, battery, storage and network)
-- [ ] Live resource and battery monitoring using public Android APIs
+- [x] Basic live resource and battery monitoring using public Android APIs
   - [x] Live battery state, available/used RAM, data-partition storage and network state
   - [x] Chiyuri process CPU and PSS memory metrics
 - [ ] Launcher behavior, appearance and interaction settings
