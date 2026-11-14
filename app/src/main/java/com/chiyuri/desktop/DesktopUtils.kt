@@ -31,3 +31,10 @@ internal fun isValidWorkspaceName(value: String): Boolean {
     return name.isNotBlank() && name.length <= 24 &&
         name.none { it.code < 0x20 || it.code == 0x7F }
 }
+
+internal fun nextFileSortMode(mode: String): String = when (mode) {
+    "name" -> "date"
+    "date" -> "size"
+    "size" -> "type"
+    else -> "name"
+}
