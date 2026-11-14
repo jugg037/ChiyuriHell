@@ -3,11 +3,14 @@ package com.chiyuri.desktop
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.graphics.drawable.Drawable
 import android.os.BatteryManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -84,6 +88,9 @@ private fun DesktopScreen() {
     var search by remember { mutableStateOf("") }
     var clock by remember { mutableStateOf(nowTime()) }
     var date by remember { mutableStateOf(nowDate()) }
+    var filesOpen by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
+    var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
 
     LaunchedEffect(startOpen) {
         if (startOpen) apps = loadApps(context)
@@ -117,7 +124,7 @@ private fun DesktopScreen() {
     Box(Modifier.fillMaxSize().background(Night)) {
         Box(
             Modifier.fillMaxSize().background(
-                Brush.linearGradient(listOf(Color(0xFF1B080E), Night, Color(0xFF09090B)))
+                wallpaperBrush(wallpaperStyle)
             )
         )
         Box(
@@ -175,9 +182,8 @@ private fun DesktopScreen() {
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             DesktopShortcut("Приложения", Icons.Filled.Apps) { startOpen = true }
-                            DesktopShortcut("Настройки", Icons.Filled.Settings) {
-                                context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS))
-                            }
+                            DesktopShortcut("Файлы", Icons.Filled.Apps) { filesOpen = true; startOpen = false; settingsOpen = false }
+                            DesktopShortcut("Оформление", Icons.Filled.Settings) { settingsOpen = true; filesOpen = false; startOpen = false }
                         }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -186,6 +192,32 @@ private fun DesktopScreen() {
                     }
                 }
 
+                if (filesOpen) {
+                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 380.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), tonalElevation = 8.dp) {
+                        FileExplorerPanel(context = context, onClose = { filesOpen = false })
+                    }
+                }
+                if (settingsOpen) {
+                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), tonalElevation = 8.dp) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Оформление Chiyuri", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text("Фон рабочего стола", color = Muted, fontSize = 12.sp)
+                            listOf("Кровавый градиент", "Чёрный", "Багровое свечение").forEachIndexed { index, label ->
+                                Row(Modifier.fillMaxWidth().background(if (wallpaperStyle == index) Color(0xFF35101A) else PanelSoft, RoundedCornerShape(10.dp)).clickable {
+                                    wallpaperStyle = index
+                                    saveWallpaperStyle(context, index)
+                                }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(label, color = MainText, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                    if (wallpaperStyle == index) Text("✓", color = Crimson)
+                                }
+                            }
+                            Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
+                            TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = Crimson) }
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { settingsOpen = false }) { Text("Закрыть", color = Crimson) }
+                        }
+                    }
+                }
                 if (startOpen) {
                     Surface(
                         modifier = Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(),
@@ -366,6 +398,105 @@ private fun DesktopAppShortcut(app: LaunchApp, onClick: () -> Unit, onLongClick:
         )
         Text(app.label, color = MainText, fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
+}
+
+@Composable
+private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
+    val prefs = remember { context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE) }
+    var root by remember {
+        mutableStateOf(prefs.getString("file_tree_uri", null)?.let { saved ->
+            runCatching { DocumentFile.fromTreeUri(context, Uri.parse(saved)) }.getOrNull()
+        })
+    }
+    var folderStack by remember { mutableStateOf(emptyList<DocumentFile>()) }
+    var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                root = DocumentFile.fromTreeUri(context, uri)
+                folderStack = emptyList()
+                prefs.edit().putString("file_tree_uri", uri.toString()).apply()
+                message = "Доступ к папке сохранён"
+            }.onFailure { message = "Не удалось сохранить доступ: ${it.localizedMessage}" }
+        }
+    }
+    val current = folderStack.lastOrNull() ?: root
+    val entries = remember(current) {
+        runCatching { current?.listFiles()?.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { it.name?.lowercase(Locale.getDefault()) ?: "" }).orEmpty() }
+            .getOrElse { emptyList() }
+    }
+
+    Column(Modifier.fillMaxSize().padding(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Проводник", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            TextButton(onClick = onClose) { Text("Закрыть", color = Crimson) }
+        }
+        Text(message, color = Muted, fontSize = 11.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            OutlinedButton(onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
+            if (folderStack.isNotEmpty()) OutlinedButton(onClick = { folderStack = folderStack.dropLast(1) }) { Text("Назад") }
+        }
+        if (root == null) {
+            Spacer(Modifier.height(16.dp))
+            Text("Android откроет системный выбор папки. Можно выбрать доступную папку во внутренней памяти или на SD-карте.", color = Muted, fontSize = 12.sp)
+        } else if (entries.isEmpty()) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text("Папка пуста или недоступна", color = Muted, fontSize = 12.sp)
+            }
+        } else {
+            androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                items(entries, key = { it.uri.toString() }) { entry ->
+                    Row(
+                        Modifier.fillMaxWidth().background(PanelSoft, RoundedCornerShape(9.dp)).clickable {
+                            if (entry.isDirectory) folderStack = folderStack + entry
+                            else runCatching {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(entry.uri, entry.type ?: "*/*")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            }.onFailure { message = "Не удалось открыть файл: ${it.localizedMessage}" }
+                        }.padding(horizontal = 10.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(if (entry.isDirectory) "▰" else "▤", color = Crimson, modifier = Modifier.padding(end = 9.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(entry.name ?: "Без названия", color = MainText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
+                        }
+                        if (!entry.isDirectory) TextButton(onClick = {
+                            val deleted = runCatching { entry.delete() }.getOrDefault(false)
+                            message = if (deleted) "Файл удалён" else "Не удалось удалить файл"
+                        }) { Text("Удалить", color = Crimson, fontSize = 10.sp) }
+                    }
+                }
+            }
+        }
+        if (root != null) TextButton(onClick = {
+            val created = runCatching { current?.createDirectory("Новая папка") != null }.getOrDefault(false)
+            message = if (created) "Папка создана" else "Не удалось создать папку"
+        }) { Text("＋ Новая папка", color = Crimson) }
+    }
+}
+
+private fun readableSize(bytes: Long): String = when {
+    bytes < 1024 -> "${bytes} Б"
+    bytes < 1024 * 1024 -> "${bytes / 1024} КБ"
+    else -> String.format(Locale.getDefault(), "%.1f МБ", bytes / (1024f * 1024f))
+}
+
+private fun loadWallpaperStyle(context: Context): Int =
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("wallpaper_style", 0).coerceIn(0, 2)
+
+private fun saveWallpaperStyle(context: Context, style: Int) {
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putInt("wallpaper_style", style.coerceIn(0, 2)).apply()
+}
+
+private fun wallpaperBrush(style: Int): Brush = when (style) {
+    1 -> Brush.linearGradient(listOf(Color(0xFF050506), Color(0xFF101014), Color(0xFF050506)))
+    2 -> Brush.radialGradient(listOf(Color(0xFF4A0718), Color(0xFF18050C), Night))
+    else -> Brush.linearGradient(listOf(Color(0xFF1B080E), Night, Color(0xFF09090B)))
 }
 
 private fun loadApps(context: Context): List<LaunchApp> {
