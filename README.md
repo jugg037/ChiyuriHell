@@ -99,6 +99,10 @@ The project is developed in `main` in feature stages. **No public release is pla
 - Third-party archive-library licenses and restrictions are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/`.
 - A feature that Android or the target Samsung firmware cannot safely provide must be documented as a platform limitation, not falsely marked complete.
 
+## Current development gate
+
+The applicable feature roadmap is implemented. The remaining roadmap item is final portrait/landscape validation on the target SM-P619; automated lint/tests, APK verification and the full release audit are still required before publication.
+
 ## Release status
 
 No public release is being published during feature development. Pushes to `main` may produce temporary CI debug artifacts for build verification; they are not releases. A stable signed APK and GitHub Release will be created only after the applicable roadmap items and [FINAL_AUDIT.md](FINAL_AUDIT.md) checks pass. Release notes will be curated to list user-visible changes only, without CI/signing/test boilerplate. The tag workflow rejects publication while either the roadmap or final audit contains unchecked items.
