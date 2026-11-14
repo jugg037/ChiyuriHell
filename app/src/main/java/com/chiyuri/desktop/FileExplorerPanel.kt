@@ -283,7 +283,16 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
 
 private data class DeleteBudget(var entries: Int = 0)
 
-private fun deleteDocumentEntry(entry: DocumentFile): Boolean = deleteDocumentEntry(entry, DeleteBudget(), 0)
+private fun countDocumentEntries(entry: DocumentFile, depth: Int = 0): Int {
+    if (depth > 64) throw IOException("Слишком глубокая структура папок")
+    if (!entry.isDirectory) return 1
+    return 1 + entry.listFiles().sumOf { countDocumentEntries(it, depth + 1) }
+}
+
+private fun deleteDocumentEntry(entry: DocumentFile): Boolean {
+    if (countDocumentEntries(entry) > 1000) throw IOException("Удаление ограничено 1000 элементами")
+    return deleteDocumentEntry(entry, DeleteBudget(), 0)
+}
 
 private fun deleteDocumentEntry(entry: DocumentFile, budget: DeleteBudget, depth: Int): Boolean {
     budget.entries++
