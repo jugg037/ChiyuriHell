@@ -35,8 +35,9 @@ The project is developed in `main` in feature stages. **No public release is pla
   - [x] Custom image wallpaper and three built-in dark/crimson background presets
   - [x] Wallpaper scaling modes (fill/fit/stretch)
   - [x] Selectable blood-red, burgundy and scarlet accent colors
-- [ ] Reliable status indicators and orientation/layout polish
-  - [x] Live battery, charging, network, clock and date indicators
+- [x] Live status indicators
+  - [x] Battery, charging, network, clock and date indicators
+- [ ] Final portrait/landscape layout validation on SM-P619
 
 ### Stage 0.2 — Multitasking
 - [ ] System recent-task switching (restricted by Android)
