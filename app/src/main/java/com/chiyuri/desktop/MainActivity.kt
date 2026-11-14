@@ -280,7 +280,7 @@ private fun DesktopScreen() {
                             Text("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})", color = MainText, fontSize = 11.sp)
                             Text("Оперативная память: ${availableMemory(context)} свободно", color = MainText, fontSize = 11.sp)
                             Text("Батарея: ${batteryPercent(context)}%", color = MainText, fontSize = 11.sp)
-                            Text("Хранилище: ${storageSummary()}", color = MainText, fontSize = 11.sp)
+                            Text("Раздел данных: ${storageSummary()}", color = MainText, fontSize = 11.sp)
                             Text("Сеть: ${if (networkAvailable(context)) "подключена" else "нет подключения"}", color = MainText, fontSize = 11.sp)
                             Text("Системные настройки Android", color = Muted, fontSize = 12.sp)
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = Crimson) }
@@ -762,10 +762,8 @@ private fun storageSummary(): String {
     val stats = StatFs(Environment.getDataDirectory().path)
     val total = stats.blockCountLong * stats.blockSizeLong
     val free = stats.availableBlocksLong * stats.blockSizeLong
-    return String.format(Locale.getDefault(), "%.1f / %.1f ГБ свободно", free / (1024.0.pow(3)), total / (1024.0.pow(3)))
+    return String.format(Locale.getDefault(), "%.1f / %.1f ГБ свободно", free / (1024.0 * 1024.0 * 1024.0), total / (1024.0 * 1024.0 * 1024.0))
 }
-
-private fun Double.pow(power: Int): Double = kotlin.math.pow(this, power.toDouble())
 
 private fun availableMemory(context: Context): String {
     val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
