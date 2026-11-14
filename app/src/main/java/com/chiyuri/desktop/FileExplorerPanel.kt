@@ -202,18 +202,22 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                     val source = clipboardFile
                     val destination = current
                     if (source != null && destination != null) {
-                        message = if (clipboardMove) "Перенос элемента…" else "Копирование элемента…"
+                        val moving = clipboardMove
+                        message = if (moving) "Перенос элемента…" else "Копирование элемента…"
                         scope.launch(Dispatchers.IO) {
                             val result = runCatching {
                                 val copied = copyDocumentEntry(context, source, destination)
-                                if (copied && clipboardMove && !deleteDocumentEntry(source)) throw IOException("Копия создана, но исходный элемент удалить не удалось")
+                                if (copied && moving && !deleteDocumentEntry(source)) throw IOException("Копия создана, но исходный элемент удалить не удалось")
                                 copied
                             }
                             withContext(Dispatchers.Main) {
-                                message = result.fold({ if (it) "Элемент ${if (clipboardMove) "перенесён" else "скопирован"}" else "Элемент с таким именем уже существует" }, { "Операция не выполнена: ${it.localizedMessage}" })
+                                message = result.fold({ if (it) "Элемент ${if (moving) "перенесён" else "скопирован"}" else "Элемент с таким именем уже существует" }, { "Операция не выполнена: ${it.localizedMessage}" })
                                 if (result.getOrDefault(false)) {
                                     refreshKey++
-                                    clipboardFile = null
+                                    if (moving && clipboardFile?.uri == source.uri) {
+                                        clipboardFile = null
+                                        clipboardMove = false
+                                    }
                                 }
                             }
                         }
