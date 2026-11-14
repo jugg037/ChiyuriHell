@@ -31,7 +31,14 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            // Main-branch test builds use the debug certificate so the release
+            // variant can be installed before the permanent release key exists.
+            // Tagged production releases never set this environment variable.
+            signingConfig = if (System.getenv("RELEASE_TEST_WITH_DEBUG_KEY") == "true") {
+                signingConfigs.getByName("debug")
+            } else {
+                signingConfigs.getByName("release")
+            }
         }
     }
 
