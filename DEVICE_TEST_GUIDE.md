@@ -15,9 +15,9 @@ Use this guide only after the latest `main` workflow has completed successfully 
 - Pin, unpin and reorder taskbar apps; restart the launcher and check that pins remain.
 - Switch among all three workspaces, rename them, add/remove shortcuts and confirm each workspace keeps its own shortcuts.
 - Test Alt+Tab with Usage Access enabled and disabled. Verify the Settings panel accurately reports permission state.
-- Open File Explorer and Settings together in landscape. Test minimize, restore, close, Android Back, Escape and width adjustment.
+- Open File Explorer and Settings together in landscape. Check that both panels fit without crushing the desktop area; adjust widths, then rotate to portrait and verify only the focused panel remains open. Test minimize, restore, close, Android Back and Escape.
 - Change wallpaper, fit mode, accent, app tile density and taskbar indicators; restart and check persistence.
-- Test SAF access to internal storage and SD card, read-only folders, search, sorting, create/rename/copy/move/delete, and return-to-root navigation.
+- Test SAF access to internal storage and SD card, read-only folders, search, sorting, manual refresh after an external file change, create/rename/copy/move/delete, and return-to-root navigation.
 - Test ZIP, RAR and 7z previews and extraction with safe sample archives, including encrypted ZIP/RAR/7z and multipart RAR sets where available.
 - Test hardware keyboard shortcuts and the system settings links.
 
