@@ -11,6 +11,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -75,6 +78,7 @@ private fun ChiyuriTheme(content: @Composable () -> Unit) {
 private fun DesktopScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
     var apps by remember { mutableStateOf(loadApps(context)) }
+    var pinnedPackages by remember { mutableStateOf(loadPinnedPackages(context, apps)) }
     var startOpen by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var clock by remember { mutableStateOf(nowTime()) }
@@ -93,6 +97,14 @@ private fun DesktopScreen() {
     }
 
     val visibleApps = apps.filter { it.label.contains(search, ignoreCase = true) }
+    val pinnedApps = apps.filter { it.packageName in pinnedPackages }
+
+    fun togglePin(app: LaunchApp) {
+        val updated = if (app.packageName in pinnedPackages) pinnedPackages - app.packageName
+            else pinnedPackages + app.packageName
+        pinnedPackages = updated
+        savePinnedPackages(context, updated)
+    }
 
     Box(Modifier.fillMaxSize().background(Night)) {
         Box(
@@ -180,6 +192,7 @@ private fun DesktopScreen() {
                             }
                             Spacer(Modifier.height(10.dp))
                             Text("Все приложения", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
+                            Text("Удерживай значок, чтобы закрепить его на панели задач или убрать с неё", color = Muted, fontSize = 10.sp)
                             Spacer(Modifier.height(6.dp))
                             if (visibleApps.isEmpty()) {
                                 Box(
@@ -200,11 +213,15 @@ private fun DesktopScreen() {
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     items(visibleApps, key = { it.packageName }) { app ->
-                                        AppTile(app) {
-                                            launchApp(context, app)
-                                            startOpen = false
-                                            search = ""
-                                        }
+                                        AppTile(
+                                            app = app,
+                                            onClick = {
+                                                launchApp(context, app)
+                                                startOpen = false
+                                                search = ""
+                                            },
+                                            onLongClick = { togglePin(app) }
+                                        )
                                     }
                                 }
                             }
@@ -232,16 +249,27 @@ private fun DesktopScreen() {
                 }
             }
             Spacer(Modifier.width(8.dp))
-            apps.take(5).forEach { app ->
-                Box(Modifier.size(42.dp).clickable { launchApp(context, app) }, contentAlignment = Alignment.Center) {
-                    Image(
-                        bitmap = remember(app.packageName) { app.icon.toBitmap(72, 72).asImageBitmap() },
-                        contentDescription = app.label,
-                        modifier = Modifier.size(25.dp)
-                    )
+            Row(
+                Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                pinnedApps.forEach { app ->
+                    Box(
+                        Modifier.size(42.dp).combinedClickable(
+                            onClick = { launchApp(context, app) },
+                            onLongClick = { togglePin(app) }
+                        ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            bitmap = remember(app.packageName) { app.icon.toBitmap(72, 72).asImageBitmap() },
+                            contentDescription = "${app.label}, закреплено",
+                            modifier = Modifier.size(25.dp)
+                        )
+                    }
                 }
             }
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Text(clock, color = MainText, fontSize = 12.sp)
                 Text(date, color = Muted, fontSize = 9.sp)
@@ -264,9 +292,9 @@ private fun DesktopShortcut(label: String, icon: androidx.compose.ui.graphics.ve
 }
 
 @Composable
-private fun AppTile(app: LaunchApp, onClick: () -> Unit) {
+private fun AppTile(app: LaunchApp, onClick: () -> Unit, onLongClick: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clickable(onClick = onClick)
+        Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .background(PanelSoft, RoundedCornerShape(12.dp)).padding(vertical = 10.dp, horizontal = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -292,6 +320,21 @@ private fun loadApps(context: Context): List<LaunchApp> {
         }
         .distinctBy { it.packageName }
         .sortedBy { it.label.lowercase(Locale.getDefault()) }
+}
+
+private fun loadPinnedPackages(context: Context, apps: List<LaunchApp>): Set<String> {
+    val prefs = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
+    if (prefs.getBoolean("pins_initialized", false)) {
+        return prefs.getStringSet("pinned_packages", emptySet())?.toSet() ?: emptySet()
+    }
+    val defaults = apps.take(5).map { it.packageName }.toSet()
+    prefs.edit().putStringSet("pinned_packages", defaults).putBoolean("pins_initialized", true).apply()
+    return defaults
+}
+
+private fun savePinnedPackages(context: Context, packages: Set<String>) {
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
+        .edit().putStringSet("pinned_packages", packages.toSet()).apply()
 }
 
 private fun launchApp(context: Context, app: LaunchApp) {
