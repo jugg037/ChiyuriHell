@@ -50,6 +50,9 @@ import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import java.util.zip.ZipInputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -476,6 +479,7 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
     }
     var folderStack by remember { mutableStateOf(emptyList<DocumentFile>()) }
     var refreshKey by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -532,11 +536,25 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
                             Text(entry.name ?: "Без названия", color = MainText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
                         }
-                        if (!entry.isDirectory) TextButton(onClick = {
-                            val deleted = runCatching { entry.delete() }.getOrDefault(false)
-                            message = if (deleted) "Файл удалён" else "Не удалось удалить файл"
-                            if (deleted) refreshKey++
-                        }) { Text("Удалить", color = Crimson, fontSize = 10.sp) }
+                        if (!entry.isDirectory) {
+                            if (entry.name?.endsWith(".zip", ignoreCase = true) == true) {
+                                TextButton(onClick = {
+                                    message = "Распаковка ZIP…"
+                                    scope.launch(Dispatchers.IO) {
+                                        val result = runCatching { extractZipArchive(context, entry, current) }
+                                        withContext(Dispatchers.Main) {
+                                            message = result.fold({ "ZIP распакован: ${it} файлов" }, { "Ошибка распаковки: ${it.localizedMessage}" })
+                                            if (result.isSuccess) refreshKey++
+                                        }
+                                    }
+                                }) { Text("ZIP", color = Crimson, fontSize = 10.sp) }
+                            }
+                            TextButton(onClick = {
+                                val deleted = runCatching { entry.delete() }.getOrDefault(false)
+                                message = if (deleted) "Файл удалён" else "Не удалось удалить файл"
+                                if (deleted) refreshKey++
+                            }) { Text("Удалить", color = Crimson, fontSize = 10.sp) }
+                        }
                     }
                 }
             }
@@ -547,6 +565,44 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
             if (created) refreshKey++
         }) { Text("＋ Новая папка", color = Crimson) }
     }
+}
+
+private fun extractZipArchive(context: Context, archive: DocumentFile, destination: DocumentFile?): Int {
+    require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
+    var extracted = 0
+    var totalBytes = 0L
+    context.contentResolver.openInputStream(archive.uri).use { raw ->
+        requireNotNull(raw) { "Не удалось прочитать ZIP-архив" }
+        ZipInputStream(raw).use { zip ->
+            var item = zip.nextEntry
+            while (item != null) {
+                if (!item.isDirectory) {
+                    val safeName = item.name.substringAfterLast('/').substringAfterLast('\\').trim()
+                    if (safeName.isNotBlank() && safeName != "." && safeName != "..") {
+                        val output = destination.createFile("application/octet-stream", safeName)
+                        if (output != null) {
+                            context.contentResolver.openOutputStream(output.uri).use { stream ->
+                                requireNotNull(stream) { "Не удалось создать файл: $safeName" }
+                                val buffer = ByteArray(8192)
+                                while (true) {
+                                    val count = zip.read(buffer)
+                                    if (count < 0) break
+                                    totalBytes += count
+                                    if (totalBytes > 256L * 1024L * 1024L) throw IOException("Превышен лимит распаковки 256 МБ")
+                                    stream.write(buffer, 0, count)
+                                }
+                            }
+                            extracted++
+                        }
+                    }
+                }
+                zip.closeEntry()
+                item = zip.nextEntry
+                if (extracted > 1000) throw IOException("Слишком много файлов в архиве")
+            }
+        }
+    }
+    return extracted
 }
 
 private fun readableSize(bytes: Long): String = when {
