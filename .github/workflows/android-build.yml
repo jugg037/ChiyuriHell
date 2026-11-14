@@ -92,6 +92,17 @@ jobs:
           fi
           gradle --no-daemon :app:assembleRelease
 
+      - name: Verify release APK signature
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::Android apksigner tool not found"
+            exit 1
+          fi
+          "$APKSIGNER" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+
       - name: Prepare release assets
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
