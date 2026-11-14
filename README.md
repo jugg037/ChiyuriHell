@@ -56,7 +56,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 
 ### Stage 0.3 — File manager
 - [x] Browse a user-selected shared-storage folder using Android's Storage Access Framework
-- [x] Search and sort entries by name, modification date or size
+- [x] Search and sort entries by name, modification date, size or file type
 - [x] Open supported files with installed Android apps
 - [x] Basic file operations: create folders, rename files/folders and confirm recursive deletion using granted SAF permissions
 - [x] Copy/move files and folders recursively using SAF, with 1,000-entry, 64-level and 512 MiB limits
