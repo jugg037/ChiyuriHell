@@ -101,7 +101,8 @@ jobs:
           echo "$BADGING" | grep -F "package: name='com.chiyuri.desktop'" >/dev/null
           EXPECTED_NAME="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
           EXPECTED_CODE="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
-          echo "$BADGING" | grep -F "versionCode='$EXPECTED_CODE' versionName='$EXPECTED_NAME'" >/dev/null
+          echo "$BADGING" | grep -F "versionCode='$EXPECTED_CODE'" >/dev/null
+          echo "$BADGING" | grep -F "versionName='$EXPECTED_NAME'" >/dev/null
 
       - name: Prepare checksum
         shell: bash
