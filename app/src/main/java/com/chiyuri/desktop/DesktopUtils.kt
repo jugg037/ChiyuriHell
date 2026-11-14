@@ -18,3 +18,16 @@ internal fun readableSize(bytes: Long): String = when {
     bytes < 1024 * 1024 -> "${bytes / 1024} КБ"
     else -> String.format(Locale.getDefault(), "%.1f МБ", bytes / (1024f * 1024f))
 }
+
+internal fun isValidFileName(value: String): Boolean {
+    val name = value.trim()
+    return name.isNotBlank() && name.length <= 255 && name != "." && name != ".." &&
+        !name.contains('/') && !name.contains('\\') &&
+        name.none { it.code < 0x20 || it.code == 0x7F }
+}
+
+internal fun isValidWorkspaceName(value: String): Boolean {
+    val name = value.trim()
+    return name.isNotBlank() && name.length <= 24 &&
+        name.none { it.code < 0x20 || it.code == 0x7F }
+}
