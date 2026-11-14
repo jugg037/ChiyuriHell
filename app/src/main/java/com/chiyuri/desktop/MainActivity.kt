@@ -96,6 +96,7 @@ private fun ChiyuriTheme(content: @Composable () -> Unit) {
 @Composable
 private fun DesktopScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val isWideLayout = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 700
     var apps by remember { mutableStateOf(loadApps(context)) }
     var pinnedPackages by remember { mutableStateOf(loadPinnedPackages(context, apps)) }
     var desktopPackages by remember { mutableStateOf(loadDesktopPackages(context)) }
@@ -228,8 +229,8 @@ private fun DesktopScreen() {
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             DesktopShortcut("Приложения", Icons.Filled.Apps) { startOpen = true }
-                            DesktopShortcut("Файлы", Icons.Filled.Apps) { filesOpen = true; activePanel = "files"; startOpen = false }
-                            DesktopShortcut("Оформление", Icons.Filled.Settings) { settingsOpen = true; activePanel = "settings"; startOpen = false }
+                            DesktopShortcut("Файлы", Icons.Filled.Apps) { filesOpen = true; if (!isWideLayout) settingsOpen = false; activePanel = "files"; startOpen = false }
+                            DesktopShortcut("Оформление", Icons.Filled.Settings) { settingsOpen = true; if (!isWideLayout) filesOpen = false; activePanel = "settings"; startOpen = false }
                         }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -400,9 +401,9 @@ private fun DesktopScreen() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("▤", color = if (filesOpen && activePanel == "files") Crimson else MainText, fontSize = 20.sp,
-                    modifier = Modifier.clickable { filesOpen = true; activePanel = "files" }.padding(horizontal = 9.dp, vertical = 8.dp))
+                    modifier = Modifier.clickable { filesOpen = true; if (!isWideLayout) settingsOpen = false; activePanel = "files" }.padding(horizontal = 9.dp, vertical = 8.dp))
                 Text("⚙", color = if (settingsOpen && activePanel == "settings") Crimson else MainText, fontSize = 18.sp,
-                    modifier = Modifier.clickable { settingsOpen = true; activePanel = "settings" }.padding(horizontal = 9.dp, vertical = 8.dp))
+                    modifier = Modifier.clickable { settingsOpen = true; if (!isWideLayout) filesOpen = false; activePanel = "settings" }.padding(horizontal = 9.dp, vertical = 8.dp))
                 pinnedApps.forEach { app ->
                     Box(
                         Modifier.size(42.dp).background(if (app.packageName == lastLaunchedPackage) Color(0xFF35101A) else Color.Transparent, RoundedCornerShape(9.dp)).combinedClickable(
