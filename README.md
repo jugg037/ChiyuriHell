@@ -55,7 +55,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Clearly report Android/firmware limitations rather than simulate unsupported OS-level window control
 
 ### Stage 0.3 — File manager
-- [x] Browse a user-selected shared-storage folder using Android's Storage Access Framework, with breadcrumb, parent and root navigation
+- [x] Browse a user-selected shared-storage folder using Android's Storage Access Framework, with breadcrumb, parent/root navigation and manual refresh
 - [x] Search and sort entries by name, modification date, size or file type
 - [x] Open supported files with installed Android apps
 - [x] Basic file operations: create folders, rename files/folders and confirm recursive deletion using granted SAF permissions
