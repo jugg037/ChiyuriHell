@@ -39,6 +39,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
     var fileSearch by remember { mutableStateOf("") }
+    var sortMode by remember { mutableStateOf(prefs.getString("file_sort_mode", "name") ?: "name") }
     var archivePassword by remember { mutableStateOf("") }
     var archivePreview by remember { mutableStateOf<String?>(null) }
     var deleteTarget by remember { mutableStateOf<DocumentFile?>(null) }
@@ -81,7 +82,12 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         runCatching { current?.listFiles()?.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { it.name?.lowercase(Locale.getDefault()) ?: "" }).orEmpty() }
             .getOrElse { emptyList() }
     }
-    val visibleEntries = entries.filter { it.name?.contains(fileSearch, ignoreCase = true) == true }
+    val filteredEntries = entries.filter { it.name?.contains(fileSearch, ignoreCase = true) == true }
+    val visibleEntries = when (sortMode) {
+        "date" -> filteredEntries.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenByDescending { it.lastModified() })
+        "size" -> filteredEntries.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenByDescending { it.length() })
+        else -> filteredEntries.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { it.name.orEmpty().lowercase(Locale.getDefault()) })
+    }
 
     fun previewArchive(entry: DocumentFile, format: String) {
         message = "Чтение состава $format…"
@@ -123,6 +129,15 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         Text("Папка: ${current?.name ?: root?.name ?: "не выбрана"} · ${entries.size} элементов", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text("Доступ: ${when { root == null -> "не выбран"; root?.canWrite() == true -> "чтение и запись"; root?.canRead() == true -> "только чтение"; else -> "недоступен" }}", color = Muted, fontSize = 10.sp)
         Text(message, color = Muted, fontSize = 11.sp)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Сортировка:", color = Muted, fontSize = 10.sp)
+            TextButton(onClick = {
+                sortMode = when (sortMode) { "name" -> "date"; "date" -> "size"; else -> "name" }
+                prefs.edit().putString("file_sort_mode", sortMode).apply()
+            }) {
+                Text(when (sortMode) { "date" -> "По дате"; "size" -> "По размеру"; else -> "По имени" }, color = LocalAccent.current, fontSize = 10.sp)
+            }
+        }
         OutlinedTextField(value = fileSearch, onValueChange = { fileSearch = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("Поиск файлов") })
         OutlinedTextField(value = archivePassword, onValueChange = { archivePassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), label = { Text("Пароль архива (если нужен)") })
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
