@@ -496,6 +496,8 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
     var message by remember { mutableStateOf("Выбери папку, к которой Chiyuri Desktop получит доступ") }
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameValue by remember { mutableStateOf("") }
+    var clipboardFile by remember { mutableStateOf<DocumentFile?>(null) }
+    var clipboardMove by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             runCatching {
@@ -552,6 +554,12 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
                             Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
                         }
                         if (!entry.isDirectory) {
+                            TextButton(onClick = { clipboardFile = entry; clipboardMove = false; message = "Файл добавлен в буфер копирования" }) {
+                                Text("Копия", color = Muted, fontSize = 9.sp)
+                            }
+                            TextButton(onClick = { clipboardFile = entry; clipboardMove = true; message = "Файл готов к переносу" }) {
+                                Text("Вырезать", color = Muted, fontSize = 9.sp)
+                            }
                             TextButton(onClick = {
                                 renameTarget = entry
                                 renameValue = entry.name ?: ""
@@ -578,11 +586,37 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
                 }
             }
         }
-        if (root != null) TextButton(onClick = {
-            val created = runCatching { current?.createDirectory("Новая папка") != null }.getOrDefault(false)
-            message = if (created) "Папка создана" else "Не удалось создать папку"
-            if (created) refreshKey++
-        }) { Text("＋ Новая папка", color = Crimson) }
+        if (root != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = {
+                    val created = runCatching { current?.createDirectory("Новая папка") != null }.getOrDefault(false)
+                    message = if (created) "Папка создана" else "Не удалось создать папку"
+                    if (created) refreshKey++
+                }) { Text("＋ Новая папка", color = Crimson) }
+                Spacer(Modifier.weight(1f))
+                TextButton(enabled = clipboardFile != null, onClick = {
+                    val source = clipboardFile
+                    val destination = current
+                    if (source != null && destination != null) {
+                        message = if (clipboardMove) "Перенос файла…" else "Копирование файла…"
+                        scope.launch(Dispatchers.IO) {
+                            val result = runCatching {
+                                val copied = copyDocumentFile(context, source, destination)
+                                if (copied && clipboardMove) source.delete()
+                                copied
+                            }
+                            withContext(Dispatchers.Main) {
+                                message = result.fold({ if (it) "Файл ${if (clipboardMove) "перенесён" else "скопирован"}" else "Файл с таким именем уже существует" }, { "Операция не выполнена: ${it.localizedMessage}" })
+                                if (result.getOrDefault(false)) {
+                                    refreshKey++
+                                    clipboardFile = null
+                                }
+                            }
+                        }
+                    }
+                }) { Text("Вставить", color = Crimson) }
+            }
+        }
         if (renameTarget != null) {
             AlertDialog(
                 onDismissRequest = { renameTarget = null },
@@ -603,6 +637,27 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit) {
             )
         }
     }
+}
+
+private fun copyDocumentFile(context: Context, source: DocumentFile, destination: DocumentFile): Boolean {
+    require(!source.isDirectory) { "Копирование папок пока не поддерживается" }
+    val name = source.name ?: "file"
+    if (destination.findFile(name) != null) return false
+    val target = destination.createFile(source.type ?: "application/octet-stream", name)
+        ?: throw IOException("Не удалось создать файл назначения")
+    try {
+        context.contentResolver.openInputStream(source.uri).use { input ->
+            requireNotNull(input) { "Не удалось прочитать исходный файл" }
+            context.contentResolver.openOutputStream(target.uri).use { output ->
+                requireNotNull(output) { "Не удалось записать файл" }
+                input.copyTo(output)
+            }
+        }
+    } catch (error: Exception) {
+        target.delete()
+        throw error
+    }
+    return true
 }
 
 private fun extractZipArchive(context: Context, archive: DocumentFile, destination: DocumentFile?): Int {
