@@ -139,6 +139,7 @@ private fun DesktopScreen() {
     var rootChecking by remember { mutableStateOf(false) }
     var usageAccessGranted by remember { mutableStateOf(hasUsageAccess(context)) }
     var activePackage by remember { mutableStateOf<String?>(null) }
+    var systemRecentPackages by remember { mutableStateOf<List<String>>(emptyList()) }
     var usageSince by remember { mutableLongStateOf(System.currentTimeMillis() - 24L * 60L * 60L * 1000L) }
     val uiScope = rememberCoroutineScope()
     var wallpaperScale by remember { mutableIntStateOf(loadWallpaperScale(context)) }
@@ -198,6 +199,7 @@ private fun DesktopScreen() {
 
     LaunchedEffect(Unit) {
         var previousPermission = usageAccessGranted
+        var lastRecentRefresh = 0L
         while (true) {
             val granted = hasUsageAccess(context)
             if (granted && !previousPermission) {
@@ -209,8 +211,13 @@ private fun DesktopScreen() {
                 val snapshot = queryForegroundPackage(context, usageSince, activePackage)
                 activePackage = snapshot.first
                 usageSince = snapshot.second
+                if (System.currentTimeMillis() - lastRecentRefresh >= 10_000L) {
+                    systemRecentPackages = queryRecentPackages(context)
+                    lastRecentRefresh = System.currentTimeMillis()
+                }
             } else {
                 activePackage = null
+                systemRecentPackages = emptyList()
             }
             previousPermission = granted
             delay(2500)
@@ -218,6 +225,8 @@ private fun DesktopScreen() {
     }
 
     val visibleApps = apps.filter { it.label.contains(search, ignoreCase = true) || it.packageName.contains(search, ignoreCase = true) }
+    val recentPackageOrder = if (usageAccessGranted && systemRecentPackages.isNotEmpty()) systemRecentPackages else recentPackages
+    val recentApps = recentPackageOrder.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }.take(8)
     val pinnedApps = pinnedPackages.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }
 
     fun togglePin(app: LaunchApp) {
@@ -303,7 +312,7 @@ private fun DesktopScreen() {
                         true
                     }
                     event.isAltPressed && event.key == Key.Tab -> {
-                        val nextApp = recentPackages.asSequence().filter { it != lastLaunchedPackage }.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }.firstOrNull()
+                        val nextApp = recentPackageOrder.asSequence().filter { it != lastLaunchedPackage }.mapNotNull { packageName -> apps.firstOrNull { it.packageName == packageName } }.firstOrNull()
                         if (nextApp != null) openApp(nextApp)
                         nextApp != null
                     }
@@ -568,6 +577,18 @@ private fun DesktopScreen() {
                                     }
                                 }
                             }
+                            if (recentApps.isNotEmpty()) {
+                                Text("Недавние", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
+                                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    recentApps.forEach { app ->
+                                        RecentAppShortcut(app = app, onClick = {
+                                            openApp(app)
+                                            startOpen = false
+                                            search = ""
+                                        })
+                                    }
+                                }
+                            }
                             Text("Все приложения", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
                             Text("Долгое нажатие: закрепить на панели задач. Для ярлыка рабочего стола используй отдельную кнопку ниже.", color = Muted, fontSize = 10.sp)
                             Spacer(Modifier.height(6.dp))
@@ -675,6 +696,21 @@ private fun DesktopScreen() {
         }
     }
     }
+    }
+}
+
+@Composable
+private fun RecentAppShortcut(app: LaunchApp, onClick: () -> Unit) {
+    Column(
+        Modifier.width(62.dp).clickable(onClick = onClick).padding(vertical = 6.dp, horizontal = 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            bitmap = remember(app.packageName) { app.icon.toBitmap(72, 72).asImageBitmap() },
+            contentDescription = app.label,
+            modifier = Modifier.size(26.dp)
+        )
+        Text(app.label, color = MainText, fontSize = 8.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -948,6 +984,21 @@ private fun launchAppAdjacent(context: Context, app: LaunchApp): Boolean {
         Toast.makeText(context, "Не удалось открыть рядом. Попробуй сначала включить разделённый экран Android.", Toast.LENGTH_LONG).show()
         false
     }
+}
+
+private fun queryRecentPackages(context: Context): List<String> {
+    val now = System.currentTimeMillis()
+    val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    return runCatching {
+        manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 7L * 24L * 60L * 60L * 1000L, now)
+            .asSequence()
+            .filter { it.packageName != context.packageName && it.totalTimeInForeground > 0L }
+            .sortedByDescending { it.lastTimeUsed }
+            .map { it.packageName }
+            .distinct()
+            .take(12)
+            .toList()
+    }.getOrDefault(emptyList())
 }
 
 private fun hasUsageAccess(context: Context): Boolean {
