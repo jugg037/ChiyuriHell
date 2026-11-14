@@ -9,6 +9,8 @@ import android.graphics.drawable.Drawable
 import android.os.BatteryManager
 import android.os.Build
 import android.app.ActivityManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -178,7 +180,7 @@ private fun DesktopScreen() {
                 }
                 Surface(color = PanelSoft, shape = RoundedCornerShape(20.dp)) {
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Wifi, null, tint = Muted, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.Wifi, null, tint = if (networkAvailable(context)) Color(0xFF67D69A) else Muted, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
                         Icon(Icons.Filled.BatteryFull, null, tint = Muted, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(5.dp))
@@ -718,6 +720,13 @@ private fun saveDesktopPackages(context: Context, packages: Set<String>) {
 
 private fun launchApp(context: Context, app: LaunchApp) {
     context.packageManager.getLaunchIntentForPackage(app.packageName)?.let(context::startActivity)
+}
+
+private fun networkAvailable(context: Context): Boolean {
+    val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val network = manager.activeNetwork ?: return false
+    val capabilities = manager.getNetworkCapabilities(network) ?: return false
+    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 }
 
 private fun batteryPercent(context: Context): Int {
