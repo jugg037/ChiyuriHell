@@ -17,7 +17,7 @@ Windows 10-inspired Android launcher with Chiyuri black/crimson styling.
 - Portrait and landscape responsive layout
 
 ## Development roadmap — release is deliberately postponed
-The project is developed in `main` in feature stages. **No public release is planned until every applicable item below is implemented, audited and tested.**
+The project is developed in `main` in feature stages. **No public release is planned until every applicable item below is implemented, audited and tested.** The tag workflow also requires a `RELEASE_READY` file containing exactly `READY`; it will reject release tags until the final audit explicitly creates that marker.
 
 ### Stage 0.1 — Desktop shell
 - [x] Desktop, Start menu, app search and Android app launching
