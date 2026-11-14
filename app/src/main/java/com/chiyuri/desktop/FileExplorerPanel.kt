@@ -430,14 +430,20 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
 
 private data class DeleteBudget(var entries: Int = 0)
 
-private fun countDocumentEntries(entry: DocumentFile, depth: Int = 0): Int {
+private fun countDocumentEntries(entry: DocumentFile, budget: DeleteBudget, depth: Int = 0): Int {
     if (depth > 64) throw IOException("Слишком глубокая структура папок")
+    budget.entries++
+    if (budget.entries > 1000) throw IOException("Удаление ограничено 1000 элементами")
     if (!entry.isDirectory) return 1
-    return 1 + entry.listFiles().sumOf { countDocumentEntries(it, depth + 1) }
+    var count = 1
+    entry.listFiles().forEach { child ->
+        count += countDocumentEntries(child, budget, depth + 1)
+    }
+    return count
 }
 
 private fun deleteDocumentEntry(entry: DocumentFile): Boolean {
-    if (countDocumentEntries(entry) > 1000) throw IOException("Удаление ограничено 1000 элементами")
+    countDocumentEntries(entry, DeleteBudget())
     return deleteDocumentEntry(entry, DeleteBudget(), 0)
 }
 
@@ -467,7 +473,7 @@ private fun copyDocumentEntry(
     if (budget.entries > 1000) throw IOException("В операции больше 1000 элементов")
     if (depth > 64) throw IOException("Слишком глубокая структура папок")
     val name = source.name?.substringAfterLast('/')?.substringAfterLast('\\')
-        ?.takeIf { it.isNotBlank() && it.length <= 255 && it != "." && it != ".." && it.none { character -> character.code < 0x20 || character.code == 0x7F } }
+        ?.takeIf(::isValidFileName)
         ?: throw IOException("Недопустимое имя элемента")
     if (destination.findFile(name) != null) throw IOException("Элемент с именем $name уже существует")
     if (source.isDirectory) {
