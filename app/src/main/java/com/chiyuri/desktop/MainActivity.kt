@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import java.io.File
+import java.io.OutputStream
 import android.net.Uri
 import android.graphics.drawable.Drawable
 import android.os.BatteryManager
@@ -65,6 +67,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.documentfile.provider.DocumentFile
+import com.github.junrar.Archive
+import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -609,6 +613,23 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
     }
     val visibleEntries = entries.filter { it.name?.contains(fileSearch, ignoreCase = true) == true }
 
+    fun startArchiveExtraction(entry: DocumentFile, format: String) {
+        message = "Распаковка $format…"
+        scope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                when (format) {
+                    "ZIP" -> extractZipArchive(context, entry, current)
+                    "7Z" -> extractSevenZArchive(context, entry, current)
+                    else -> extractRarArchive(context, entry, current)
+                }
+            }
+            withContext(Dispatchers.Main) {
+                message = result.fold({ "$format распакован: $it файлов" }, { "Ошибка $format: ${it.localizedMessage}" })
+                if (result.isSuccess) refreshKey++
+            }
+        }
+    }
+
     Column(Modifier.fillMaxSize().padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Проводник", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable(onClick = onFocus))
@@ -660,17 +681,13 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
                                 renameTarget = entry
                                 renameValue = entry.name ?: ""
                             }) { Text("Имя", color = Muted, fontSize = 10.sp) }
-                            if (entry.name?.endsWith(".zip", ignoreCase = true) == true) {
-                                TextButton(onClick = {
-                                    message = "Распаковка ZIP…"
-                                    scope.launch(Dispatchers.IO) {
-                                        val result = runCatching { extractZipArchive(context, entry, current) }
-                                        withContext(Dispatchers.Main) {
-                                            message = result.fold({ "ZIP распакован: ${it} файлов" }, { "Ошибка распаковки: ${it.localizedMessage}" })
-                                            if (result.isSuccess) refreshKey++
-                                        }
-                                    }
-                                }) { Text("ZIP", color = Crimson, fontSize = 10.sp) }
+                            when {
+                                entry.name?.endsWith(".zip", ignoreCase = true) == true ->
+                                    TextButton(onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = Crimson, fontSize = 10.sp) }
+                                entry.name?.endsWith(".7z", ignoreCase = true) == true ->
+                                    TextButton(onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = Crimson, fontSize = 10.sp) }
+                                entry.name?.endsWith(".rar", ignoreCase = true) == true ->
+                                    TextButton(onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = Crimson, fontSize = 10.sp) }
                             }
                             TextButton(onClick = {
                                 val deleted = runCatching { entry.delete() }.getOrDefault(false)
@@ -754,6 +771,130 @@ private fun copyDocumentFile(context: Context, source: DocumentFile, destination
         throw error
     }
     return true
+}
+
+private class LimitedOutputStream(
+    private val target: OutputStream,
+    private val limit: Long
+) : OutputStream() {
+    var bytesWritten: Long = 0
+        private set
+
+    override fun write(value: Int) {
+        if (bytesWritten + 1 > limit) throw IOException("Превышен лимит распаковки 256 МБ")
+        target.write(value)
+        bytesWritten++
+    }
+
+    override fun write(buffer: ByteArray, offset: Int, length: Int) {
+        if (bytesWritten + length > limit) throw IOException("Превышен лимит распаковки 256 МБ")
+        target.write(buffer, offset, length)
+        bytesWritten += length
+    }
+
+    override fun flush() = target.flush()
+}
+
+private fun safeArchiveEntryName(rawName: String): String =
+    rawName.substringAfterLast('/').substringAfterLast('\\').trim()
+
+private fun extractSevenZArchive(context: Context, archive: DocumentFile, destination: DocumentFile?): Int {
+    require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
+    val tempFile = File.createTempFile("chiyuri-7z-", ".7z", context.cacheDir)
+    try {
+        context.contentResolver.openInputStream(archive.uri).use { input ->
+            requireNotNull(input) { "Не удалось прочитать 7Z-архив" }
+            tempFile.outputStream().use { output ->
+                val buffer = ByteArray(8192)
+                var copied = 0L
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    copied += count
+                    if (copied > 512L * 1024L * 1024L) throw IOException("Архив больше 512 МБ")
+                    output.write(buffer, 0, count)
+                }
+            }
+        }
+        var extracted = 0
+        var processed = 0
+        var totalBytes = 0L
+        SevenZFile.builder().setFile(tempFile).setMaxMemoryLimitKiB(64 * 1024).get().use { seven ->
+            var entry = seven.nextEntry
+            while (entry != null) {
+                processed++
+                if (processed > 1000) throw IOException("В архиве больше 1000 элементов")
+                if (!entry.isDirectory) {
+                    val name = safeArchiveEntryName(entry.name ?: "")
+                    if (name.isNotBlank() && name != "." && name != ".." && destination.findFile(name) == null) {
+                        val target = destination.createFile("application/octet-stream", name)
+                        if (target != null) {
+                            try {
+                                context.contentResolver.openOutputStream(target.uri).use { output ->
+                                    requireNotNull(output) { "Не удалось создать файл: $name" }
+                                    val buffer = ByteArray(8192)
+                                    while (true) {
+                                        val count = seven.read(buffer)
+                                        if (count < 0) break
+                                        totalBytes += count
+                                        if (totalBytes > 256L * 1024L * 1024L) throw IOException("Превышен лимит распаковки 256 МБ")
+                                        output.write(buffer, 0, count)
+                                    }
+                                }
+                                extracted++
+                            } catch (error: Exception) {
+                                target.delete()
+                                throw error
+                            }
+                        }
+                    }
+                }
+                entry = seven.nextEntry
+            }
+        }
+        return extracted
+    } finally {
+        tempFile.delete()
+    }
+}
+
+private fun extractRarArchive(context: Context, archiveFile: DocumentFile, destination: DocumentFile?): Int {
+    require(destination != null && destination.canWrite()) { "Нет доступа на запись в текущую папку" }
+    var extracted = 0
+    var processed = 0
+    var totalBytes = 0L
+    context.contentResolver.openInputStream(archiveFile.uri).use { input ->
+        requireNotNull(input) { "Не удалось прочитать RAR-архив" }
+        Archive(input).use { rar ->
+            var header = rar.nextFileHeader()
+            while (header != null) {
+                processed++
+                if (processed > 1000) throw IOException("В архиве больше 1000 элементов")
+                if (!header.isDirectory) {
+                    val name = safeArchiveEntryName(header.fileNameString ?: "")
+                    if (name.isNotBlank() && name != "." && name != ".." && destination.findFile(name) == null) {
+                        val target = destination.createFile("application/octet-stream", name)
+                        if (target != null) {
+                            try {
+                                context.contentResolver.openOutputStream(target.uri).use { output ->
+                                    requireNotNull(output) { "Не удалось создать файл: $name" }
+                                    val bounded = LimitedOutputStream(output, 256L * 1024L * 1024L - totalBytes)
+                                    rar.extractFile(header, bounded)
+                                    totalBytes += bounded.bytesWritten
+                                }
+                                extracted++
+                            } catch (error: Exception) {
+                                target.delete()
+                                throw error
+                            }
+                        }
+                    }
+                }
+                header = rar.nextFileHeader()
+            }
+        }
+    }
+    return extracted
 }
 
 private fun extractZipArchive(context: Context, archive: DocumentFile, destination: DocumentFile?): Int {
