@@ -64,6 +64,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [x] Basic device dashboard (model, Android version, available RAM, battery, storage and network)
 - [ ] Live resource and battery monitoring using public Android APIs
   - [x] Live battery state, available/used RAM, data-partition storage and network state
+  - [x] Chiyuri process CPU and PSS memory metrics
 - [ ] Launcher behavior, appearance and interaction settings
   - [x] Persisted background presets, custom wallpaper image and fit/fill/stretch options
   - [x] Three persistent accent-color choices
