@@ -3,9 +3,9 @@
 Do not create RELEASE_READY or push a version tag until every applicable check below passes. A checkbox means the check was actually performed, not merely that code exists.
 
 ## Automated repository checks
-- [ ] GitHub Actions Android lint completes successfully
-- [ ] Unit tests complete successfully
-- [ ] Debug APK builds and has a SHA-256 checksum
+- [x] GitHub Actions Android lint completes successfully (workflow run #301)
+- [x] Unit tests complete successfully (workflow run #301)
+- [x] Debug APK builds and has a SHA-256 checksum (workflow run #301; checksum independently verified)
 - [ ] Release APK builds using the stable signing key
 - [ ] apksigner verifies the release APK
 - [ ] Release versionName matches the Git tag and versionCode is incremented
