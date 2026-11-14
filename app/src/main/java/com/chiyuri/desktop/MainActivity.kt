@@ -532,7 +532,7 @@ private fun DesktopScreen() {
                             TextButton(onClick = {
                                 val homeSettings = Intent(android.provider.Settings.ACTION_HOME_SETTINGS)
                                 runCatching { context.startActivity(homeSettings) }
-                                    .onFailure { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+                                    .onFailure { openSystemSettings(context, android.provider.Settings.ACTION_SETTINGS) }
                             }) { Text("Выбрать лаунчер по умолчанию", color = LocalAccent.current) }
                             Text("Системные разделы", color = Muted, fontSize = 12.sp)
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
