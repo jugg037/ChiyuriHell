@@ -128,7 +128,9 @@ private fun DesktopScreen() {
     var clock by remember { mutableStateOf(nowTime()) }
     var date by remember { mutableStateOf(nowDate()) }
     var filesOpen by remember { mutableStateOf(false) }
+    var filesMinimized by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
+    var settingsMinimized by remember { mutableStateOf(false) }
     var activePanel by remember { mutableStateOf("files") }
     var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
     var accentStyle by remember { mutableIntStateOf(loadAccentStyle(context)) }
@@ -228,6 +230,7 @@ private fun DesktopScreen() {
                     }
                     event.isCtrlPressed && event.isAltPressed && event.key == Key.F -> {
                         filesOpen = true
+                        filesMinimized = false
                         if (!isWideLayout) settingsOpen = false
                         activePanel = "files"
                         startOpen = false
@@ -235,6 +238,7 @@ private fun DesktopScreen() {
                     }
                     event.isCtrlPressed && event.isAltPressed && event.key == Key.S -> {
                         settingsOpen = true
+                        settingsMinimized = false
                         if (!isWideLayout) filesOpen = false
                         activePanel = "settings"
                         startOpen = false
@@ -248,8 +252,8 @@ private fun DesktopScreen() {
                     event.key == Key.Escape -> {
                         when {
                             startOpen -> startOpen = false
-                            activePanel == "files" && filesOpen -> filesOpen = false
-                            activePanel == "settings" && settingsOpen -> settingsOpen = false
+                            activePanel == "files" && filesOpen -> { filesOpen = false; filesMinimized = false }
+                            activePanel == "settings" && settingsOpen -> { settingsOpen = false; settingsMinimized = false }
                         }
                         true
                     }
@@ -324,8 +328,8 @@ private fun DesktopScreen() {
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             DesktopShortcut("Приложения", Icons.Filled.Apps) { startOpen = true }
-                            DesktopShortcut("Файлы", Icons.Filled.FolderOpen) { filesOpen = true; if (!isWideLayout) settingsOpen = false; activePanel = "files"; startOpen = false }
-                            DesktopShortcut("Оформление", Icons.Filled.Palette) { settingsOpen = true; if (!isWideLayout) filesOpen = false; activePanel = "settings"; startOpen = false }
+                            DesktopShortcut("Файлы", Icons.Filled.FolderOpen) { filesOpen = true; filesMinimized = false; if (!isWideLayout) settingsOpen = false; activePanel = "files"; startOpen = false }
+                            DesktopShortcut("Оформление", Icons.Filled.Palette) { settingsOpen = true; settingsMinimized = false; if (!isWideLayout) filesOpen = false; activePanel = "settings"; startOpen = false }
                         }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -335,14 +339,18 @@ private fun DesktopScreen() {
                 }
 
                 if (filesOpen) {
-                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 380.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "files") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
-                        FileExplorerPanel(context = context, onClose = { filesOpen = false }, onFocus = { activePanel = "files" })
+                    Surface(modifier = if (filesMinimized) Modifier.size(0.dp) else Modifier.widthIn(min = 245.dp, max = 380.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "files") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
+                        FileExplorerPanel(context = context, onClose = { filesOpen = false; filesMinimized = false }, onMinimize = { filesMinimized = true }, onFocus = { activePanel = "files" })
                     }
                 }
                 if (settingsOpen) {
-                    Surface(modifier = Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
+                    Surface(modifier = if (settingsMinimized) Modifier.size(0.dp) else Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") LocalAccent.current else Color(0xFF343038)), tonalElevation = 8.dp) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("Оформление Chiyuri", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { activePanel = "settings" })
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Оформление Chiyuri", color = MainText, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable { activePanel = "settings" })
+                                TextButton(onClick = { settingsMinimized = true }) { Text("—", color = LocalAccent.current) }
+                                TextButton(onClick = { settingsOpen = false; settingsMinimized = false }) { Text("×", color = LocalAccent.current) }
+                            }
                             Text("Акцентный цвет", color = Muted, fontSize = 12.sp)
                             listOf("Кровавый", "Бордовый", "Алый").forEachIndexed { index, label ->
                                 Row(Modifier.fillMaxWidth().clickable {
@@ -523,10 +531,16 @@ private fun DesktopScreen() {
                 Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("▤", color = if (filesOpen && activePanel == "files") LocalAccent.current else MainText, fontSize = 20.sp,
-                    modifier = Modifier.clickable { filesOpen = true; if (!isWideLayout) settingsOpen = false; activePanel = "files" }.padding(horizontal = 9.dp, vertical = 8.dp))
-                Text("⚙", color = if (settingsOpen && activePanel == "settings") LocalAccent.current else MainText, fontSize = 18.sp,
-                    modifier = Modifier.clickable { settingsOpen = true; if (!isWideLayout) filesOpen = false; activePanel = "settings" }.padding(horizontal = 9.dp, vertical = 8.dp))
+                Text("▤", color = if (filesOpen && !filesMinimized && activePanel == "files") LocalAccent.current else MainText, fontSize = 20.sp,
+                    modifier = Modifier.clickable {
+                        if (filesOpen && !filesMinimized && activePanel == "files") filesMinimized = true
+                        else { filesOpen = true; filesMinimized = false; if (!isWideLayout) settingsOpen = false; activePanel = "files" }
+                    }.padding(horizontal = 9.dp, vertical = 8.dp))
+                Text("⚙", color = if (settingsOpen && !settingsMinimized && activePanel == "settings") LocalAccent.current else MainText, fontSize = 18.sp,
+                    modifier = Modifier.clickable {
+                        if (settingsOpen && !settingsMinimized && activePanel == "settings") settingsMinimized = true
+                        else { settingsOpen = true; settingsMinimized = false; if (!isWideLayout) filesOpen = false; activePanel = "settings" }
+                    }.padding(horizontal = 9.dp, vertical = 8.dp))
                 pinnedApps.forEach { app ->
                     Box(
                         Modifier.size(42.dp).background(if (app.packageName == lastLaunchedPackage) Color(0xFF35101A) else Color.Transparent, RoundedCornerShape(9.dp)).combinedClickable(
@@ -618,7 +632,7 @@ private fun DesktopAppShortcut(app: LaunchApp, onClick: () -> Unit, onLongClick:
 }
 
 @Composable
-private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: () -> Unit) {
+private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize: () -> Unit, onFocus: () -> Unit) {
     val prefs = remember { context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE) }
     var root by remember {
         mutableStateOf(prefs.getString("file_tree_uri", null)?.let { saved ->
@@ -688,7 +702,8 @@ private fun FileExplorerPanel(context: Context, onClose: () -> Unit, onFocus: ()
     Column(Modifier.fillMaxSize().padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Проводник", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable(onClick = onFocus))
-            TextButton(onClick = onClose) { Text("Закрыть", color = LocalAccent.current) }
+            TextButton(onClick = onMinimize) { Text("—", color = LocalAccent.current) }
+            TextButton(onClick = onClose) { Text("×", color = LocalAccent.current) }
         }
         Text("Папка: ${current?.name ?: root?.name ?: "не выбрана"} · ${entries.size} элементов", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(message, color = Muted, fontSize = 11.sp)
