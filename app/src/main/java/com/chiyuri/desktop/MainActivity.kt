@@ -117,6 +117,9 @@ private fun DesktopScreen() {
     var apps by remember { mutableStateOf(loadApps(context)) }
     var pinnedPackages by remember { mutableStateOf(loadPinnedPackages(context, apps)) }
     var workspace by remember { mutableIntStateOf(loadWorkspace(context)) }
+    var workspaceNames by remember { mutableStateOf(loadWorkspaceNames(context)) }
+    var renameWorkspaceIndex by remember { mutableStateOf<Int?>(null) }
+    var workspaceNameDraft by remember { mutableStateOf("") }
     var desktopPackages by remember { mutableStateOf(loadDesktopPackages(context, workspace)) }
     var startOpen by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
@@ -368,14 +371,25 @@ private fun DesktopScreen() {
             ) {
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                        Text("Рабочий стол ${workspace + 1}", color = MainText, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Рабочий стол: ${workspaceNames[workspace]}", color = MainText, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             (0..2).forEach { index ->
-                                TextButton(onClick = { switchWorkspace(index) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
-                                    Text("Стол ${index + 1}", color = if (workspace == index) LocalAccent.current else Muted, fontSize = 10.sp)
+                                Surface(
+                                    color = if (workspace == index) Color(0xFF35101A) else PanelSoft,
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = { switchWorkspace(index) },
+                                        onLongClick = {
+                                            workspaceNameDraft = workspaceNames[index]
+                                            renameWorkspaceIndex = index
+                                        }
+                                    )
+                                ) {
+                                    Text(workspaceNames[index], color = if (workspace == index) LocalAccent.current else Muted, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp))
                                 }
                             }
                         }
+                        Text("Удерживай название рабочего стола, чтобы переименовать его", color = Muted, fontSize = 9.sp)
                         Text("Твоя система. Твои правила.", color = Muted, fontSize = 13.sp)
                         Text("Ярлыки рабочего стола", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
                         Text("Нажатие — запуск · удержание — убрать ярлык", color = Muted, fontSize = 9.sp)
@@ -715,6 +729,29 @@ private fun DesktopScreen() {
         }
     }
     }
+        if (renameWorkspaceIndex != null) {
+            val index = renameWorkspaceIndex
+            AlertDialog(
+                onDismissRequest = { renameWorkspaceIndex = null },
+                title = { Text("Переименовать рабочий стол") },
+                text = {
+                    OutlinedTextField(value = workspaceNameDraft, onValueChange = { workspaceNameDraft = it }, singleLine = true, label = { Text("Название") })
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val cleanName = workspaceNameDraft.trim()
+                        val validName = cleanName.isNotBlank() && cleanName.length <= 24 &&
+                            cleanName.none { it.code < 0x20 || it.code == 0x7F }
+                        if (index != null && validName) {
+                            saveWorkspaceName(context, index, cleanName)
+                            workspaceNames = loadWorkspaceNames(context)
+                        }
+                        renameWorkspaceIndex = null
+                    }) { Text("Сохранить", color = LocalAccent.current) }
+                },
+                dismissButton = { TextButton(onClick = { renameWorkspaceIndex = null }) { Text("Отмена") } }
+            )
+        }
     }
 }
 
@@ -965,7 +1002,18 @@ private fun savePinnedPackages(context: Context, packages: List<String>) {
         .apply()
 }
 
+private fun loadWorkspaceNames(context: Context): List<String> {
+    val prefs = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
+    return (0..2).map { index -> prefs.getString("workspace_name_$index", "Стол ${index + 1}") ?: "Стол ${index + 1}" }
+}
+
+private fun saveWorkspaceName(context: Context, index: Int, name: String) {
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
+        .edit().putString("workspace_name_$index", name).apply()
+}
+
 private fun loadWorkspace(context: Context): Int = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("active_workspace", 0).coerceIn(0, 2)
+ context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("active_workspace", 0).coerceIn(0, 2)
 
 private fun loadDesktopPackages(context: Context, workspace: Int): Set<String> {
     val prefs = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE)
