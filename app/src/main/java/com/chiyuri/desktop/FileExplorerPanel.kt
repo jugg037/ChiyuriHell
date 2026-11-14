@@ -41,6 +41,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     var fileSearch by remember { mutableStateOf("") }
     var sortMode by remember { mutableStateOf(prefs.getString("file_sort_mode", "name") ?: "name") }
     var archivePassword by remember { mutableStateOf("") }
+    var isArchiveBusy by remember { mutableStateOf(false) }
     var archivePreview by remember { mutableStateOf<String?>(null) }
     var deleteTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
@@ -92,20 +93,25 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
     }
 
     fun previewArchive(entry: DocumentFile, format: String) {
+        if (isArchiveBusy) return
+        isArchiveBusy = true
         message = "Чтение состава $format…"
         scope.launch(Dispatchers.IO) {
             val result = runCatching { listArchiveEntries(context, entry, format, archivePassword) }
             withContext(Dispatchers.Main) {
+                isArchiveBusy = false
                 archivePreview = result.fold(
                     { names -> if (names.isEmpty()) "Архив пуст" else names.joinToString("\n") },
                     { "Не удалось прочитать архив: ${it.localizedMessage}" }
                 )
-                message = "Состав архива готов"
+                message = if (result.isSuccess) "Состав архива готов" else "Не удалось прочитать архив"
             }
         }
     }
 
     fun startArchiveExtraction(entry: DocumentFile, format: String) {
+        if (isArchiveBusy) return
+        isArchiveBusy = true
         message = "Распаковка $format…"
         scope.launch(Dispatchers.IO) {
             val result = runCatching {
@@ -116,6 +122,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                 }
             }
             withContext(Dispatchers.Main) {
+                isArchiveBusy = false
                 message = result.fold({ "$format распакован: $it файлов" }, { "Ошибка $format: ${it.localizedMessage}" })
                 if (result.isSuccess) refreshKey++
             }
@@ -126,25 +133,29 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Проводник", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable(onClick = onFocus))
             TextButton(onClick = onMinimize) { Text("—", color = LocalAccent.current) }
-            TextButton(onClick = onClose) { Text("×", color = LocalAccent.current) }
+            TextButton(enabled = !isArchiveBusy, onClick = onClose) { Text("×", color = LocalAccent.current) }
         }
         Text("Папка: ${current?.name ?: root?.name ?: "не выбрана"} · ${entries.size} элементов", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text("Доступ: ${when { root == null -> "не выбран"; root?.canWrite() == true -> "чтение и запись"; root?.canRead() == true -> "только чтение"; else -> "недоступен" }}", color = Muted, fontSize = 10.sp)
         Text(message, color = Muted, fontSize = 11.sp)
+        if (isArchiveBusy) {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+            Text("Архив обрабатывается. Не закрывай проводник.", color = Muted, fontSize = 9.sp)
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Сортировка:", color = Muted, fontSize = 10.sp)
-            TextButton(onClick = {
+            TextButton(enabled = !isArchiveBusy, onClick = {
                 sortMode = when (sortMode) { "name" -> "date"; "date" -> "size"; else -> "name" }
                 prefs.edit().putString("file_sort_mode", sortMode).apply()
             }) {
                 Text(when (sortMode) { "date" -> "По дате"; "size" -> "По размеру"; else -> "По имени" }, color = LocalAccent.current, fontSize = 10.sp)
             }
         }
-        OutlinedTextField(value = fileSearch, onValueChange = { fileSearch = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("Поиск файлов") })
-        OutlinedTextField(value = archivePassword, onValueChange = { archivePassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), label = { Text("Пароль архива (если нужен)") })
+        OutlinedTextField(value = fileSearch, onValueChange = { fileSearch = it }, enabled = !isArchiveBusy, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("Поиск файлов") })
+        OutlinedTextField(value = archivePassword, onValueChange = { archivePassword = it }, enabled = !isArchiveBusy, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), label = { Text("Пароль архива (если нужен)") })
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            OutlinedButton(onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
-            if (folderStack.isNotEmpty()) OutlinedButton(onClick = { folderStack = folderStack.dropLast(1); fileSearch = "" }) { Text("Назад") }
+            OutlinedButton(enabled = !isArchiveBusy, onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
+            if (folderStack.isNotEmpty()) OutlinedButton(enabled = !isArchiveBusy, onClick = { folderStack = folderStack.dropLast(1); fileSearch = "" }) { Text("Назад") }
         }
         if (root == null) {
             Spacer(Modifier.height(16.dp))
@@ -157,7 +168,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
             androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 lazyListItems(visibleEntries, key = { it.uri.toString() }) { entry ->
                     Row(
-                        Modifier.fillMaxWidth().background(PanelSoft, RoundedCornerShape(9.dp)).clickable {
+                        Modifier.fillMaxWidth().background(PanelSoft, RoundedCornerShape(9.dp)).clickable(enabled = !isArchiveBusy) {
                             if (entry.isDirectory) { folderStack = folderStack + entry; fileSearch = "" }
                             else runCatching {
                                 val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -174,33 +185,33 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                             Text(entry.name ?: "Без названия", color = MainText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(if (entry.isDirectory) "Папка" else readableSize(entry.length()), color = Muted, fontSize = 9.sp)
                         }
-                            TextButton(enabled = current?.canWrite() == true, onClick = {
+                            TextButton(enabled = !isArchiveBusy && current?.canWrite() == true, onClick = {
                                 renameTarget = entry
                                 renameValue = entry.name ?: ""
                             }) { Text("Имя", color = Muted, fontSize = 10.sp) }
-                        TextButton(onClick = { clipboardFile = entry; clipboardMove = false; message = "Элемент добавлен в буфер копирования" }) {
+                        TextButton(enabled = !isArchiveBusy, onClick = { clipboardFile = entry; clipboardMove = false; message = "Элемент добавлен в буфер копирования" }) {
                             Text("Копия", color = Muted, fontSize = 9.sp)
                         }
-                        TextButton(onClick = { clipboardFile = entry; clipboardMove = true; message = "Элемент готов к переносу" }) {
+                        TextButton(enabled = !isArchiveBusy, onClick = { clipboardFile = entry; clipboardMove = true; message = "Элемент готов к переносу" }) {
                             Text("Вырезать", color = Muted, fontSize = 9.sp)
                         }
                         if (!entry.isDirectory) {
                             when {
                                 entry.name?.endsWith(".zip", ignoreCase = true) == true -> {
-                                    TextButton(onClick = { previewArchive(entry, "ZIP") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(enabled = current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = LocalAccent.current, fontSize = 10.sp) }
+                                    TextButton(enabled = !isArchiveBusy, onClick = { previewArchive(entry, "ZIP") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
+                                    TextButton(enabled = !isArchiveBusy && current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "ZIP") }) { Text("ZIP", color = LocalAccent.current, fontSize = 10.sp) }
                                 }
                                 entry.name?.endsWith(".7z", ignoreCase = true) == true -> {
-                                    TextButton(onClick = { previewArchive(entry, "7Z") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(enabled = current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = LocalAccent.current, fontSize = 10.sp) }
+                                    TextButton(enabled = !isArchiveBusy, onClick = { previewArchive(entry, "7Z") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
+                                    TextButton(enabled = !isArchiveBusy && current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "7Z") }) { Text("7Z", color = LocalAccent.current, fontSize = 10.sp) }
                                 }
                                 entry.name?.endsWith(".rar", ignoreCase = true) == true -> {
-                                    TextButton(onClick = { previewArchive(entry, "RAR") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
-                                    TextButton(enabled = current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = LocalAccent.current, fontSize = 10.sp) }
+                                    TextButton(enabled = !isArchiveBusy, onClick = { previewArchive(entry, "RAR") }) { Text("Состав", color = Muted, fontSize = 9.sp) }
+                                    TextButton(enabled = !isArchiveBusy && current?.canWrite() == true, onClick = { startArchiveExtraction(entry, "RAR") }) { Text("RAR", color = LocalAccent.current, fontSize = 10.sp) }
                                 }
                             }
                         }
-                        TextButton(enabled = current?.canWrite() == true, onClick = { deleteTarget = entry }) {
+                        TextButton(enabled = !isArchiveBusy && current?.canWrite() == true, onClick = { deleteTarget = entry }) {
                             Text("Удалить", color = LocalAccent.current, fontSize = 10.sp)
                         }
                     }
@@ -209,12 +220,12 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         }
         if (root != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(enabled = current?.canWrite() == true, onClick = {
+                TextButton(enabled = !isArchiveBusy && current?.canWrite() == true, onClick = {
                     newFolderName = "Новая папка"
                     createFolderDialog = true
                 }) { Text("＋ Новая папка", color = LocalAccent.current) }
                 Spacer(Modifier.weight(1f))
-                TextButton(enabled = clipboardFile != null && current?.canWrite() == true, onClick = {
+                TextButton(enabled = !isArchiveBusy && clipboardFile != null && current?.canWrite() == true, onClick = {
                     val source = clipboardFile
                     val destination = current
                     if (source != null && destination != null) {
