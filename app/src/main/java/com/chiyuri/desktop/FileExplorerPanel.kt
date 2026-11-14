@@ -186,6 +186,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(enabled = !isBusy, onClick = { picker.launch(null) }) { Text(if (root == null) "Выбрать папку" else "Сменить папку") }
             if (folderStack.isNotEmpty()) OutlinedButton(enabled = !isBusy, onClick = { folderStack = folderStack.dropLast(1); fileSearch = "" }) { Text("Назад") }
+            if (folderStack.isNotEmpty()) OutlinedButton(enabled = !isBusy, onClick = { folderStack = emptyList(); fileSearch = "" }) { Text("Корень") }
         }
         if (root == null) {
             Spacer(Modifier.height(16.dp))
