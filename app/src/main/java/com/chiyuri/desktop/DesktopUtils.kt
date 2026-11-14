@@ -38,3 +38,5 @@ internal fun nextFileSortMode(mode: String): String = when (mode) {
     "size" -> "type"
     else -> "name"
 }
+
+internal fun isWideDesktop(widthDp: Int): Boolean = widthDp >= 1024
