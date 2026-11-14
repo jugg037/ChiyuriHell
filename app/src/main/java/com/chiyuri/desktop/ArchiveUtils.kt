@@ -154,7 +154,8 @@ private fun copyRarSetToTemp(context: Context, archiveFile: DocumentFile): Pair<
         var total = 0L
         val copied = volumes.map { volume ->
             val volumeName = volume.name?.substringAfterLast('/')?.substringAfterLast('\\')
-                ?: throw IOException("У тома RAR отсутствует имя")
+                ?.takeIf { it.isNotBlank() && it != "." && it != ".." }
+                ?: throw IOException("У тома RAR недопустимое имя")
             val target = File(tempDir, volumeName)
             context.contentResolver.openInputStream(volume.uri).use { input ->
                 requireNotNull(input) { "Не удалось прочитать том $volumeName" }
