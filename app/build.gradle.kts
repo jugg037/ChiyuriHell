@@ -50,6 +50,7 @@ dependencies {
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("org.apache.commons:commons-compress:1.28.0")
     implementation("org.tukaani:xz:1.12")
+    implementation("net.lingala.zip4j:zip4j:2.11.6")
     implementation("com.github.junrar:junrar:8.1.2")
     implementation("androidx.activity:activity-compose:1.10.0")
     implementation(platform("androidx.compose:compose-bom:2025.01.00"))
