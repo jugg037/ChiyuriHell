@@ -24,7 +24,7 @@ Do not create RELEASE_READY or push a version tag until every applicable check b
 - [ ] Grant Usage Access and verify foreground-app highlighting; repeat without the permission
 - [ ] Test wallpaper presets, custom image, fit/crop/stretch, accent colors and preference persistence
 - [ ] Test file access with read/write and read-only SAF providers
-- [ ] Test file search and sorting by name/date/size
+- [ ] Test file search and sorting by name/date/size/type
 - [ ] Test progress indication and action lockout during long file/archive operations
 - [ ] Test folder creation, rename, file/folder copy and move, recursive delete and failure recovery
 - [ ] Test ZIP, RAR and 7Z listing and extraction, including password-protected ZIP/RAR/7Z, RAR4 .r00-style and RAR5 multipart sets, wrong passwords, nested folder paths, traversal-path rejection, duplicate names and resource limits
