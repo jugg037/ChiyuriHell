@@ -68,6 +68,15 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
         }
     }
     val current = folderStack.lastOrNull() ?: root
+
+    LaunchedEffect(root) {
+        if (root != null && root?.canRead() != true) {
+            root = null
+            folderStack = emptyList()
+            prefs.edit().remove("file_tree_uri").apply()
+            message = "Сохранённый доступ к папке истёк. Выбери папку заново."
+        }
+    }
     val entries = remember(current, refreshKey) {
         runCatching { current?.listFiles()?.sortedWith(compareBy<DocumentFile> { !it.isDirectory }.thenBy { it.name?.lowercase(Locale.getDefault()) ?: "" }).orEmpty() }
             .getOrElse { emptyList() }
@@ -112,6 +121,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
             TextButton(onClick = onClose) { Text("×", color = LocalAccent.current) }
         }
         Text("Папка: ${current?.name ?: root?.name ?: "не выбрана"} · ${entries.size} элементов", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text("Доступ: ${when { root == null -> "не выбран"; root?.canWrite() == true -> "чтение и запись"; root?.canRead() == true -> "только чтение"; else -> "недоступен" }}", color = Muted, fontSize = 10.sp)
         Text(message, color = Muted, fontSize = 11.sp)
         OutlinedTextField(value = fileSearch, onValueChange = { fileSearch = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), label = { Text("Поиск файлов") })
         OutlinedTextField(value = archivePassword, onValueChange = { archivePassword = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), label = { Text("Пароль архива (если нужен)") })
