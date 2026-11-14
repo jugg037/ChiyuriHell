@@ -128,6 +128,8 @@ private fun DesktopScreen() {
     var activePanel by remember { mutableStateOf("files") }
     var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
     var accentStyle by remember { mutableIntStateOf(loadAccentStyle(context)) }
+    var showBatteryPercent by remember { mutableStateOf(loadDesktopPreference(context, "show_battery_percent", true)) }
+    var showTaskbarDate by remember { mutableStateOf(loadDesktopPreference(context, "show_taskbar_date", true)) }
     var rootStatus by remember { mutableStateOf("Не проверено") }
     var rootChecking by remember { mutableStateOf(false) }
     var usageAccessGranted by remember { mutableStateOf(hasUsageAccess(context)) }
@@ -337,7 +339,7 @@ private fun DesktopScreen() {
                         Spacer(Modifier.width(8.dp))
                         Icon(Icons.Filled.BatteryFull, null, tint = Muted, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(5.dp))
-                        Text("${batteryPercent(context)}%", color = Muted, fontSize = 12.sp)
+                        if (showBatteryPercent) Text("${batteryPercent(context)}%", color = Muted, fontSize = 12.sp)
                     }
                 }
             }
@@ -400,6 +402,21 @@ private fun DesktopScreen() {
                                 Text("Оформление Chiyuri", color = MainText, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).clickable { activePanel = "settings" })
                                 TextButton(onClick = { settingsMinimized = true }) { Text("—", color = LocalAccent.current) }
                                 TextButton(onClick = { settingsOpen = false; settingsMinimized = false }) { Text("×", color = LocalAccent.current) }
+                            }
+                            Text("Поведение панели", color = Muted, fontSize = 12.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = showBatteryPercent, onCheckedChange = {
+                                    showBatteryPercent = it
+                                    saveDesktopPreference(context, "show_battery_percent", it)
+                                })
+                                Text("Процент батареи", color = MainText, fontSize = 11.sp)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = showTaskbarDate, onCheckedChange = {
+                                    showTaskbarDate = it
+                                    saveDesktopPreference(context, "show_taskbar_date", it)
+                                })
+                                Text("Дата в панели задач", color = MainText, fontSize = 11.sp)
                             }
                             Text("Акцентный цвет", color = Muted, fontSize = 12.sp)
                             listOf("Кровавый", "Бордовый", "Алый").forEachIndexed { index, label ->
@@ -620,7 +637,7 @@ private fun DesktopScreen() {
             Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Text(clock, color = MainText, fontSize = 12.sp)
-                Text(date, color = Muted, fontSize = 9.sp)
+                if (showTaskbarDate) Text(date, color = Muted, fontSize = 9.sp)
             }
         }
     }
