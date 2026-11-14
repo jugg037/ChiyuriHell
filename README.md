@@ -30,7 +30,9 @@ The project is developed in `main` in feature stages. **No public release is pla
 - [ ] Wallpaper selection, scaling and theme customization
   - [x] Custom image wallpaper and three built-in dark/crimson background presets
   - [x] Wallpaper scaling modes (fill/fit/stretch)
+  - [x] Selectable blood-red, burgundy and scarlet accent colors
 - [ ] Reliable status indicators and orientation/layout polish
+  - [x] Live battery, charging, network, clock and date indicators
 
 ### Stage 0.2 — Multitasking
 - [ ] System recent-task switching (restricted by Android)
@@ -40,6 +42,7 @@ The project is developed in `main` in feature stages. **No public release is pla
   - [x] File explorer and appearance panels can remain open together with focus highlighting
   - [x] Taskbar shortcuts can reopen/focus the built-in panels
 - [ ] Window focus, minimize/restore and close behavior for supported in-app panels
+  - [x] Focus highlighting and close controls for built-in panels
 - [ ] Tablet-oriented split layouts and keyboard/mouse interaction
   - [x] Keyboard shortcuts: Ctrl+Space (Start), Ctrl+Alt+F (Files), Ctrl+Alt+S (Settings), Ctrl+1/2/3 (workspaces), Alt+Tab (recent launcher apps)
 - [ ] Clearly report Android/firmware limitations rather than simulate unsupported OS-level window control
@@ -58,6 +61,7 @@ The project is developed in `main` in feature stages. **No public release is pla
 ### Stage 0.5 — System tools and advanced settings
 - [x] Basic device dashboard (model, Android version, available RAM, battery)
 - [ ] Live resource and battery monitoring using public Android APIs
+  - [x] Live battery state, available/used RAM, data-partition storage and network state
 - [ ] Launcher behavior, appearance and interaction settings
   - [x] Persisted background presets, custom wallpaper image and fit/fill/stretch options
 - [ ] Optional controls only where Android permissions and Samsung firmware allow them
