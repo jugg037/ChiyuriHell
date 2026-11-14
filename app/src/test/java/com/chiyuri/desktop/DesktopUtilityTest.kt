@@ -12,6 +12,17 @@ class DesktopUtilityTest {
     }
 
     @Test
+    fun archivePathsPreserveSafeFoldersAndRejectTraversal() {
+        assertEquals(listOf("folder", "sub", "file.txt"), safeArchiveEntryPath("folder/sub/file.txt"))
+        assertEquals(listOf("folder", "file.txt"), safeArchiveEntryPath("folder//file.txt"))
+        assertEquals(null, safeArchiveEntryPath("../escape.txt"))
+        assertEquals(null, safeArchiveEntryPath("folder/../escape.txt"))
+        assertEquals(null, safeArchiveEntryPath("/absolute.txt"))
+        assertEquals(null, safeArchiveEntryPath("""C:\Windows\evil.txt"""))
+        assertEquals(null, safeArchiveEntryPath(""))
+    }
+
+    @Test
     fun emptyAndDirectoryOnlyArchiveNamesAreRejectedAsEmpty() {
         assertEquals("", safeArchiveEntryName(""))
         assertEquals("", safeArchiveEntryName("folder/"))
