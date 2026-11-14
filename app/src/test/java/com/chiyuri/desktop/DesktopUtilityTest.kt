@@ -82,6 +82,15 @@ class DesktopUtilityTest {
     }
 
     @Test
+    fun fileSortModeCyclesAndPersistsAsAStableValue() {
+        assertEquals("date", nextFileSortMode("name"))
+        assertEquals("size", nextFileSortMode("date"))
+        assertEquals("type", nextFileSortMode("size"))
+        assertEquals("name", nextFileSortMode("type"))
+        assertEquals("name", nextFileSortMode("unknown"))
+    }
+
+    @Test
     fun readableSizeUsesByteAndKilobyteUnits() {
         assertEquals("0 Б", readableSize(0))
         assertEquals("512 Б", readableSize(512))
