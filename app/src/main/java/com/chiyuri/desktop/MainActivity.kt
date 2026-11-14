@@ -376,6 +376,7 @@ private fun DesktopScreen() {
                         }
                         Text("Твоя система. Твои правила.", color = Muted, fontSize = 13.sp)
                         Text("Ярлыки рабочего стола", color = Muted, fontSize = 11.sp, letterSpacing = 1.sp)
+                        Text("Нажатие — запуск · удержание — убрать ярлык", color = Muted, fontSize = 9.sp)
                         val desktopApps = apps.filter { it.packageName in desktopPackages }
                         if (desktopApps.isEmpty()) {
                             Text("Здесь пока пусто. Удерживай приложение в меню «Пуск», чтобы добавить ярлык.", color = Muted, fontSize = 11.sp)
