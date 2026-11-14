@@ -800,7 +800,7 @@ private class LimitedOutputStream(
     override fun flush() = target.flush()
 }
 
-private fun safeArchiveEntryName(rawName: String): String =
+internal fun safeArchiveEntryName(rawName: String): String =
     rawName.substringAfterLast('/').substringAfterLast('\\').trim()
 
 private fun extractSevenZArchive(context: Context, archive: DocumentFile, destination: DocumentFile?, password: String): Int {
@@ -955,7 +955,7 @@ private fun extractZipArchive(context: Context, archive: DocumentFile, destinati
     return extracted
 }
 
-private fun readableSize(bytes: Long): String = when {
+internal fun readableSize(bytes: Long): String = when {
     bytes < 1024 -> "${bytes} Б"
     bytes < 1024 * 1024 -> "${bytes / 1024} КБ"
     else -> String.format(Locale.getDefault(), "%.1f МБ", bytes / (1024f * 1024f))
