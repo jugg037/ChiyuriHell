@@ -196,6 +196,18 @@ private fun DesktopScreen() {
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when {
+                    event.isCtrlPressed && event.key == Key.One -> {
+                        switchWorkspace(0)
+                        true
+                    }
+                    event.isCtrlPressed && event.key == Key.Two -> {
+                        switchWorkspace(1)
+                        true
+                    }
+                    event.isCtrlPressed && event.key == Key.Three -> {
+                        switchWorkspace(2)
+                        true
+                    }
                     event.isCtrlPressed && event.key == Key.Spacebar -> {
                         startOpen = !startOpen
                         true
