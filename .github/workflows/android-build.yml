@@ -41,6 +41,13 @@ jobs:
             echo "::error::Release blocked: curated RELEASE_NOTES.md is missing"
             exit 1
           fi
+          for checklist in README.md FINAL_AUDIT.md; do
+            if grep -qE '^- \\[ \\]' "$checklist"; then
+              echo "::error::Release blocked: unchecked items remain in $checklist"
+              grep -nE '^- \\[ \\]' "$checklist"
+              exit 1
+            fi
+          done
           VERSION_NAME="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           if [ -z "$VERSION_NAME" ] || [ "$TAG_VERSION" != "$VERSION_NAME" ]; then
