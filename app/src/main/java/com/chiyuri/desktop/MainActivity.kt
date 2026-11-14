@@ -573,6 +573,14 @@ private fun DesktopScreen() {
                                 TextButton(onClick = { openSystemSettings(context, android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS) }) { Text("Местоположение", color = LocalAccent.current, fontSize = 10.sp) }
                             }
                             TextButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }) { Text("Открыть настройки устройства", color = LocalAccent.current) }
+                            Text("Сочетания клавиш", color = Muted, fontSize = 12.sp)
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("Ctrl + Space — меню «Пуск»", color = MainText, fontSize = 10.sp)
+                                Text("Alt + Tab — недавнее приложение", color = MainText, fontSize = 10.sp)
+                                Text("Ctrl + 1 / 2 / 3 — рабочие столы", color = MainText, fontSize = 10.sp)
+                                Text("Ctrl + Alt + F — файловый менеджер", color = MainText, fontSize = 10.sp)
+                                Text("Ctrl + Alt + S — настройки Chiyuri", color = MainText, fontSize = 10.sp)
+                            }
                             TextButton(onClick = { settingsOpen = false; settingsMinimized = false }) { Text("Закрыть", color = LocalAccent.current) }
                         }
                     }
