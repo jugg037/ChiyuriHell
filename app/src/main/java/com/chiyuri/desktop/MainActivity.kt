@@ -84,7 +84,8 @@ import java.util.Locale
 private val Night = Color(0xFF09090B)
 private val Panel = Color(0xEE17171C)
 private val PanelSoft = Color(0xCC24242B)
-private val Crimson = Color(0xFFD7193F)
+private val DefaultLocalAccent.current = Color(0xFFD7193F)
+private val LocalAccent = staticCompositionLocalOf { DefaultCrimson }
 private val MainText = Color(0xFFF4F1F2)
 private val Muted = Color(0xFFAAA4A8)
 
@@ -101,7 +102,7 @@ class MainActivity : ComponentActivity() {
 private fun ChiyuriTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = Crimson,
+            primary = DefaultCrimson,
             onPrimary = Color.White,
             background = Night,
             surface = Panel,
@@ -128,6 +129,7 @@ private fun DesktopScreen() {
     var settingsOpen by remember { mutableStateOf(false) }
     var activePanel by remember { mutableStateOf("files") }
     var wallpaperStyle by remember { mutableIntStateOf(loadWallpaperStyle(context)) }
+    var accentStyle by remember { mutableIntStateOf(loadAccentStyle(context)) }
     var wallpaperScale by remember { mutableIntStateOf(loadWallpaperScale(context)) }
     val focusRequester = remember { FocusRequester() }
     var recentPackages by remember { mutableStateOf(loadRecentPackages(context)) }
@@ -197,6 +199,7 @@ private fun DesktopScreen() {
         saveDesktopPackages(context, workspace, updated)
     }
 
+    CompositionLocalProvider(LocalAccent provides accentColor(accentStyle)) {
     Box(
         Modifier.fillMaxSize().background(Night).focusRequester(focusRequester).focusable()
             .onPreviewKeyEvent { event ->
@@ -335,6 +338,19 @@ private fun DesktopScreen() {
                     Surface(modifier = Modifier.widthIn(min = 245.dp, max = 340.dp).fillMaxHeight(), color = Panel, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (activePanel == "settings") Crimson else Color(0xFF343038)), tonalElevation = 8.dp) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Оформление Chiyuri", color = MainText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { activePanel = "settings" })
+                            Text("Акцентный цвет", color = Muted, fontSize = 12.sp)
+                            listOf("Кровавый", "Бордовый", "Алый").forEachIndexed { index, label ->
+                                Row(Modifier.fillMaxWidth().clickable {
+                                    accentStyle = index
+                                    saveAccentStyle(context, index)
+                                }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(selected = accentStyle == index, onClick = {
+                                        accentStyle = index
+                                        saveAccentStyle(context, index)
+                                    }, colors = RadioButtonDefaults.colors(selectedColor = LocalAccent.current))
+                                    Text(label, color = MainText, fontSize = 12.sp)
+                                }
+                            }
                             Text("Фон рабочего стола", color = Muted, fontSize = 12.sp)
                             Text("Масштаб изображения", color = Muted, fontSize = 12.sp)
                             listOf("Заполнить", "Вписать", "Растянуть").forEachIndexed { index, label ->
@@ -514,6 +530,7 @@ private fun DesktopScreen() {
                 Text(date, color = Muted, fontSize = 9.sp)
             }
         }
+    }
     }
 }
 
@@ -966,6 +983,18 @@ private fun loadWallpaperScale(context: Context): Int =
 
 private fun saveWallpaperScale(context: Context, scale: Int) {
     context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putInt("wallpaper_scale", scale.coerceIn(0, 2)).apply()
+}
+
+private fun loadAccentStyle(context: Context): Int = context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).getInt("accent_style", 0).coerceIn(0, 2)
+
+private fun saveAccentStyle(context: Context, style: Int) {
+    context.getSharedPreferences("desktop_preferences", Context.MODE_PRIVATE).edit().putInt("accent_style", style.coerceIn(0, 2)).apply()
+}
+
+private fun accentColor(style: Int): Color = when (style) {
+    1 -> Color(0xFF9E1235)
+    2 -> Color(0xFFFF304F)
+    else -> DefaultCrimson
 }
 
 private fun loadWallpaperUri(context: Context): String? =
