@@ -35,7 +35,7 @@ Do not create RELEASE_READY or push a version tag until every applicable check b
 ## Publication checks
 - [ ] Confirm release notes describe only the changes included in this release
 - [ ] Confirm APK package name, versionName and versionCode
-- [ ] Confirm the APK signature is stable and can update the previously installed build
+- [ ] Verify the stable release signing certificate; uninstall the debug build before the first signed release install because its debug certificate differs; verify in-place updates on subsequent releases
 - [ ] Confirm GitHub Release contains the APK and matching SHA-256 file
 - [ ] Download the published APK and verify its checksum
 - [ ] Confirm the published release is not marked as a prerelease
