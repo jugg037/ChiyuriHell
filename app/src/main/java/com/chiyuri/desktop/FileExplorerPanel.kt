@@ -206,6 +206,7 @@ internal fun FileExplorerPanel(context: Context, onClose: () -> Unit, onMinimize
                         message = if (moving) "Перенос элемента…" else "Копирование элемента…"
                         scope.launch(Dispatchers.IO) {
                             val result = runCatching {
+                                if (moving && !source.canWrite()) throw IOException("Нет разрешения на удаление исходного элемента")
                                 val copied = copyDocumentEntry(context, source, destination)
                                 if (copied && moving && !deleteDocumentEntry(source)) throw IOException("Копия создана, но исходный элемент удалить не удалось")
                                 copied
