@@ -51,6 +51,7 @@ The project is developed in `main` in feature stages. **No public release is pla
   - [x] Taskbar shortcuts can reopen/focus the built-in panels
 - [x] Window focus, minimize/restore and close behavior for supported in-app panels
 - [x] Tablet-oriented split layouts and keyboard/pointer interaction; dual panels require at least 1024 dp and automatically narrow to preserve desktop workspace width
+  - [x] Respect Android safe drawing areas, navigation bars and the on-screen keyboard on edge-to-edge devices
   - [x] Keyboard shortcuts: Ctrl+Space (Start), Ctrl+Alt+F (Files), Ctrl+Alt+S (Settings), Ctrl+1/2/3 (workspaces), Alt+Tab (recent launcher apps)
 - [x] Clearly report Android/firmware limitations rather than simulate unsupported OS-level window control
 
