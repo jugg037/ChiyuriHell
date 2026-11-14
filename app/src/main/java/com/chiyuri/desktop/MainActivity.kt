@@ -853,7 +853,7 @@ private fun decodeWallpaper(context: Context, savedUri: String): androidx.compos
     val targetWidth = context.resources.displayMetrics.widthPixels.coerceAtLeast(1) * 2
     val targetHeight = context.resources.displayMetrics.heightPixels.coerceAtLeast(1) * 2
     var sample = 1
-    while (bounds.outWidth / sample > targetWidth || bounds.outHeight / sample > targetHeight) sample *= 2
+    while (sample < 512 && (bounds.outWidth / sample > targetWidth || bounds.outHeight / sample > targetHeight)) sample *= 2
     val options = BitmapFactory.Options().apply { inSampleSize = sample }
     return context.contentResolver.openInputStream(uri).use { input ->
         requireNotNull(input) { "Не удалось открыть изображение повторно" }
