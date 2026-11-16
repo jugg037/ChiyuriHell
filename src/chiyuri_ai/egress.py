@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import http.client
 import ipaddress
 import socket
+import ssl
 from collections.abc import Callable
 from dataclasses import dataclass
 from urllib.parse import urlsplit
@@ -98,3 +100,42 @@ class NetworkEgressPolicy:
         if parsed.query:
             request_target += "?" + parsed.query
         return AuthorizedEndpoint(host, port, request_target, addresses)
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """Connects to a validated IP while preserving TLS certificate hostname checks."""
+
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        addresses: tuple[str, ...],
+        *,
+        timeout: float,
+    ) -> None:
+        super().__init__(host, port, timeout=timeout, context=ssl.create_default_context())
+        self._approved_addresses = addresses
+
+    def connect(self) -> None:
+        if self._tunnel_host:
+            raise OSError("HTTPS proxy tunnelling is not supported by the pinned client")
+        last_error: OSError | None = None
+        for address in self._approved_addresses:
+            raw_socket = None
+            try:
+                raw_socket = socket.create_connection(
+                    (address, self.port),
+                    timeout=self.timeout,
+                    source_address=self.source_address,
+                )
+                self.sock = self._context.wrap_socket(
+                    raw_socket,
+                    server_hostname=self.host,
+                )
+                return
+            except OSError as exc:
+                last_error = exc
+                if raw_socket is not None:
+                    raw_socket.close()
+        if last_error is not None:
+            raise last_error
+        raise OSError("No validated destination address is available")

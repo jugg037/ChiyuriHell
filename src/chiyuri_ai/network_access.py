@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import http.client
 import ipaddress
 import json
 import socket
-import ssl
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -15,7 +13,7 @@ from urllib.parse import quote, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from uuid import uuid4
 
-from chiyuri_ai.egress import EgressDenied, NetworkEgressPolicy
+from chiyuri_ai.egress import EgressDenied, NetworkEgressPolicy, _PinnedHTTPSConnection
 
 
 class NetworkPermission(StrEnum):
@@ -144,46 +142,6 @@ class SafeInternetClient:
         if len(payload) > self.max_bytes:
             raise ValueError("Internet response exceeded the configured size limit")
         return payload.decode("utf-8", errors="replace")
-
-
-class _PinnedHTTPSConnection(http.client.HTTPSConnection):
-    """Connects to a previously validated IP while retaining TLS hostname checks."""
-
-    def __init__(
-        self,
-        host: str,
-        port: int,
-        addresses: tuple[str, ...],
-        *,
-        timeout: float,
-    ) -> None:
-        super().__init__(host, port, timeout=timeout, context=ssl.create_default_context())
-        self._approved_addresses = addresses
-
-    def connect(self) -> None:
-        if self._tunnel_host:
-            raise OSError("HTTPS proxy tunnelling is not supported by the pinned client")
-        last_error: OSError | None = None
-        for address in self._approved_addresses:
-            raw_socket = None
-            try:
-                raw_socket = socket.create_connection(
-                    (address, self.port),
-                    timeout=self.timeout,
-                    source_address=self.source_address,
-                )
-                self.sock = self._context.wrap_socket(
-                    raw_socket,
-                    server_hostname=self.host,
-                )
-                return
-            except OSError as exc:
-                last_error = exc
-                if raw_socket is not None:
-                    raw_socket.close()
-        if last_error is not None:
-            raise last_error
-        raise OSError("No validated destination address is available")
 
 
 class DeviceConnector:
