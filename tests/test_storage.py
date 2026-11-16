@@ -14,6 +14,7 @@ def test_storage_paths_can_be_redirected_to_another_drive(monkeypatch, tmp_path:
     assert paths.library == root / "Library"
     assert paths.cache == root / "Cache"
     assert paths.backups == root / "Backups"
+    assert paths.avatars == root / "Library" / "Avatars"
 
 
 def test_create_builds_private_storage_layout(tmp_path: Path):
@@ -29,5 +30,5 @@ def test_create_builds_private_storage_layout(tmp_path: Path):
     paths.create()
 
     assert all(path.is_dir() for path in (
-        paths.root, paths.models, paths.library, paths.cache, paths.backups
+        paths.root, paths.models, paths.library, paths.cache, paths.backups, paths.avatars
     ))
