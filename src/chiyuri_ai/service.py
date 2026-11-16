@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Callable
 
 from chiyuri_ai.memory import ConversationMemory
 from chiyuri_ai.models import Capability, GenerationRequest, ModelRouter
@@ -19,9 +20,15 @@ class Turn:
 class ConversationService:
     """Persists a user turn and routes it through the selected chat adapter."""
 
-    def __init__(self, memory: ConversationMemory, router: ModelRouter) -> None:
+    def __init__(
+        self,
+        memory: ConversationMemory,
+        router: ModelRouter,
+        system_prompt_provider: Callable[[], str] | None = None,
+    ) -> None:
         self.memory = memory
         self.router = router
+        self.system_prompt_provider = system_prompt_provider or (lambda: "")
 
     def new_conversation(self, title: str = "Новый диалог") -> str:
         return self.memory.create_conversation(title)
@@ -37,6 +44,7 @@ class ConversationService:
                 capability=Capability.CHAT,
                 prompt=prompt,
                 conversation_id=conversation_id,
+                system_prompt=self.system_prompt_provider(),
             )
         )
         self.memory.add_message(conversation_id, "assistant", result.output)
