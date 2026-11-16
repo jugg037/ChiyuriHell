@@ -101,3 +101,28 @@ def test_registry_rejects_duplicate_names_and_bad_arguments(tmp_path):
         raise AssertionError("duplicate tool registration unexpectedly succeeded")
     assert registry.dispatch("desktop.read", {"unexpected": True}).status == "denied"
     assert calls == []
+
+
+
+def test_registry_rejects_invalid_policy_metadata(tmp_path):
+    registry = ToolRegistry(
+        PermissionPolicy({"desktop.read"}),
+        OwnerBoundIdentityPolicy(),
+        AuditLog(tmp_path / "audit.sqlite3"),
+    )
+    spec = _spec(lambda args: None)
+    invalid = ToolSpec(
+        name=spec.name,
+        description=spec.description,
+        required_scope=spec.required_scope,
+        risk=spec.risk,
+        validator=spec.validator,
+        handler=spec.handler,
+        identity_intent="self_replication",
+    )
+    try:
+        registry.register(invalid)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("invalid identity intent unexpectedly registered")

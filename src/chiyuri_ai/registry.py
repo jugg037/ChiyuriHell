@@ -57,10 +57,14 @@ class ToolRegistry:
         self._tools: dict[str, ToolSpec] = {}
 
     def register(self, spec: ToolSpec) -> None:
-        if not spec.name or not spec.name.replace("_", "").replace(".", "").isalnum():
+        if not isinstance(spec.name, str) or not spec.name or not spec.name.replace("_", "").replace(".", "").isalnum():
             raise ValueError("Tool name must contain only letters, digits, dots or underscores")
         if spec.name in self._tools:
             raise ValueError(f"Tool already registered: {spec.name}")
+        if not isinstance(spec.risk, ActionRisk) or not isinstance(
+            spec.identity_intent, IdentityIntent
+        ):
+            raise ValueError("Tool risk and identity intent must use supported enums")
         if not callable(spec.validator) or not callable(spec.handler):
             raise ValueError("Tool validator and handler must be callable")
         if not spec.description.strip() or not spec.required_scope.strip():
@@ -82,7 +86,7 @@ class ToolRegistry:
             valid = spec.validator(arguments)
         except Exception:
             valid = False
-        if not valid:
+        if valid is not True:
             return self._record_denial(spec, request_id, "invalid_arguments")
 
         identity = self._identity_policy.evaluate(spec.identity_intent)

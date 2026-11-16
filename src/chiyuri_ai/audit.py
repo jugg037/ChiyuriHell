@@ -12,7 +12,15 @@ from uuid import uuid4
 
 MAX_FIELD_LENGTH = 512
 MAX_METADATA_BYTES = 16 * 1024
-_SECRET_MARKERS = ("password", "passwd", "secret", "token", "api_key", "authorization", "credential")
+_SECRET_MARKERS = (
+    "password",
+    "passwd",
+    "secret",
+    "token",
+    "api_key",
+    "authorization",
+    "credential",
+)
 
 
 def _safe_text(value: Any, *, limit: int = MAX_FIELD_LENGTH) -> str:
