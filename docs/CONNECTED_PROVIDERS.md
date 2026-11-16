@@ -30,9 +30,8 @@ that provider.
 
 ## Next integration work
 
-1. Add a Provider Manager UI for adding, editing, enabling, disabling and testing providers.
-2. Add health checks and per-capability model selection/fallback policies.
-3. Add vision, speech, image and video adapters with explicit payload and consent handling.
-4. Route all provider traffic through the single application network broker when that process
+1. Add a provider connection test and live health status to the Provider Manager.
+2. Add vision, speech, image and video adapters with explicit payload and consent handling.
+3. Route all provider traffic through the single application network broker when that process
    boundary is implemented.
-5. Inject the same active personality and relevant memory context into every compatible mode.
+4. Inject the same active personality and relevant memory context into every compatible mode.

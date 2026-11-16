@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from chiyuri_ai.egress import EgressDenied, NetworkEgressPolicy, _PinnedHTTPSConnection
+from chiyuri_ai import egress
 from chiyuri_ai.models import Capability, GenerationRequest, GenerationResult
 
 
@@ -47,7 +47,10 @@ class ProviderConfig:
             raise ValueError("API key must be referenced by a valid environment variable name")
         if not isinstance(self.enabled, bool) or not isinstance(self.data_sharing_approved, bool):
             raise ValueError("Provider enablement and data-sharing consent must be boolean")
-        if not isinstance(self.timeout_seconds, (int, float)) or not 1 <= self.timeout_seconds <= 600:
+        if (
+            not isinstance(self.timeout_seconds, (int, float))
+            or not 1 <= self.timeout_seconds <= 600
+        ):
             raise ValueError("Provider timeout must be between 1 and 600 seconds")
         parsed = urlsplit(self.base_url)
         try:
@@ -63,7 +66,9 @@ class ProviderConfig:
             or parsed.fragment
             or port != 443
         ):
-            raise ValueError("Cloud providers must use an HTTPS URL on port 443 without credentials")
+            raise ValueError(
+                "Cloud providers must use HTTPS on port 443 without URL credentials"
+            )
         if not self.base_url.strip() or any(char.isspace() for char in self.base_url):
             raise ValueError("Provider URL cannot be empty or contain whitespace")
 
@@ -117,7 +122,7 @@ class OpenAICompatibleAdapter:
         parsed = urlsplit(config.base_url)
         self._host = parsed.hostname or ""
         self._base_path = parsed.path.rstrip("/")
-        self._policy = NetworkEgressPolicy({self._host})
+        self._policy = egress.NetworkEgressPolicy({self._host})
 
     @property
     def model_id(self) -> str:
@@ -178,7 +183,7 @@ class OpenAICompatibleAdapter:
                 contains_user_data=True,
                 user_approved=self.config.data_sharing_approved,
             )
-        except EgressDenied as exc:
+        except egress.EgressDenied as exc:
             raise PermissionError(str(exc)) from exc
 
         headers = {
@@ -188,7 +193,7 @@ class OpenAICompatibleAdapter:
         }
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
-        connection = _PinnedHTTPSConnection(
+        connection = egress._PinnedHTTPSConnection(
             endpoint.host,
             endpoint.port,
             endpoint.addresses,

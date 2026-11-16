@@ -23,7 +23,8 @@
 - [x] llama.cpp local chat adapter (model manager remains pending).
 - [x] Generic OpenAI-compatible HTTPS chat adapter.
 - [x] Private provider configuration store (API-key values are not persisted).
-- [ ] Provider Manager UI and connection test.
+- [x] Provider Manager UI for adding, editing, enabling, disabling and removing providers.
+- [ ] Provider connection test and live health status.
 - [ ] Vision adapter and image understanding.
 - [ ] ComfyUI image workflow adapter.
 - [ ] ComfyUI video workflow adapter and cancellable queue.

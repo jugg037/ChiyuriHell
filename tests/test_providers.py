@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from chiyuri_ai.models import Capability, GenerationRequest

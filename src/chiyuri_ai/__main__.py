@@ -27,6 +27,8 @@ from chiyuri_ai.personality import (
     PersonalityService,
     PersonalityStore,
 )
+from chiyuri_ai.provider_ui import ProviderManagerDialog
+from chiyuri_ai.providers import OpenAICompatibleAdapter, ProviderStore
 from chiyuri_ai.research import InternetResearchService, SearxNGSearchProvider
 from chiyuri_ai.resources import ResourceMonitor
 from chiyuri_ai.service import ConversationService
@@ -145,10 +147,19 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.paths = paths
         self.memory = ConversationMemory(paths.root / "Memory" / "conversations.sqlite3")
-        self.router = ModelRouter()
-        self.chat_adapter = LlamaCppServerAdapter()
-        self.router.register(self.chat_adapter)
         self.personality_store = PersonalityStore(paths.root / "Personas")
+        self.provider_store = ProviderStore(paths.providers)
+        self.chat_adapter = LlamaCppServerAdapter()
+        self.router = ModelRouter()
+        self.router.register(self.chat_adapter)
+        self._load_provider_adapters()
+        preferred_model = self.memory.get_setting("preferred_chat_model")
+        if preferred_model:
+            try:
+                self.router.set_preferred(preferred_model)
+            except ValueError:
+                self.memory.set_setting("preferred_chat_model", self.chat_adapter.model_id)
+
         active_id = self.memory.get_setting("active_personality")
         if not self.personality_store.list_profiles():
             self.personality_store.save(
@@ -189,7 +200,7 @@ class MainWindow(QMainWindow):
         self.chat.append(
             "<h2>Chiyuri AI</h2>"
             "<p>Локальный диалоговый интерфейс готов. "
-            "Подключи llama.cpp server, чтобы начать общение.</p>"
+            "Подключи llama.cpp server или облачную модель в менеджере ИИ-провайдеров.</p>"
         )
         self.input = QLineEdit()
         self.input.setPlaceholderText("Напиши сообщение…")
@@ -197,14 +208,17 @@ class MainWindow(QMainWindow):
         self.send_button = QPushButton("Отправить")
         self.persona_button = QPushButton("Настроить характер")
         self.web_button = QPushButton("Поиск в интернете")
+        self.provider_button = QPushButton("ИИ-провайдеры")
         self.persona_button.clicked.connect(self.create_personality)
         self.web_button.clicked.connect(self.search_web)
+        self.provider_button.clicked.connect(self.manage_providers)
         self.send_button.clicked.connect(self.send_message)
 
         input_row = QHBoxLayout()
         input_row.addWidget(self.input, 1)
         input_row.addWidget(self.web_button)
         input_row.addWidget(self.persona_button)
+        input_row.addWidget(self.provider_button)
         input_row.addWidget(self.send_button)
 
         layout = QVBoxLayout()
@@ -240,6 +254,34 @@ class MainWindow(QMainWindow):
         self.status_timer.timeout.connect(self.update_status)
         self.status_timer.start(5000)
         self.update_status()
+
+    def _load_provider_adapters(self) -> None:
+        for config in self.provider_store.list_configs():
+            try:
+                self.router.register(OpenAICompatibleAdapter(config))
+            except (TypeError, ValueError) as exc:
+                self.statusBar().showMessage(
+                    f"Провайдер «{config.name}» пропущен: {exc}", 10000
+                )
+
+    def manage_providers(self) -> None:
+        dialog = ProviderManagerDialog(
+            self.provider_store,
+            self.chat_adapter.model_id,
+            self.router.preferred_model_id,
+            self,
+        )
+        dialog.exec()
+        self.router = ModelRouter()
+        self.router.register(self.chat_adapter)
+        self._load_provider_adapters()
+        try:
+            self.router.set_preferred(dialog.preferred_model_id)
+        except ValueError:
+            self.router.set_preferred(self.chat_adapter.model_id)
+        self.memory.set_setting("preferred_chat_model", self.router.preferred_model_id or "")
+        self.service.router = self.router
+        self.statusBar().showMessage("Список ИИ-провайдеров обновлён", 8000)
 
     def search_web(self) -> None:
         if self.worker is not None and self.worker.isRunning():
@@ -373,7 +415,7 @@ class MainWindow(QMainWindow):
             '<p style="color:#ff9b9b"><b>Ошибка движка:</b> '
             f"{html.escape(error)}</p>"
         )
-        self.statusBar().showMessage("Локальная модель недоступна")
+        self.statusBar().showMessage("Нет доступного ИИ-провайдера")
 
     def update_status(self) -> None:
         if self.status_worker is not None and self.status_worker.isRunning():

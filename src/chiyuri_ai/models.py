@@ -33,7 +33,7 @@ class GenerationResult:
 
 
 class ModelAdapter(Protocol):
-    """Contract implemented by llama.cpp, ComfyUI and voice adapters."""
+    """Contract implemented by llama.cpp, cloud APIs and media adapters."""
 
     @property
     def model_id(self) -> str: ...
@@ -51,15 +51,27 @@ class NoModelAvailable(RuntimeError):
 
 
 class ModelRouter:
-    """Selects an available local adapter without binding the UI to a runtime."""
+    """Selects a preferred compatible adapter and falls back to other providers."""
 
     def __init__(self) -> None:
         self._adapters: list[ModelAdapter] = []
+        self._preferred_model_id: str | None = None
 
     def register(self, adapter: ModelAdapter) -> None:
         if any(item.model_id == adapter.model_id for item in self._adapters):
             raise ValueError(f"Adapter already registered: {adapter.model_id}")
         self._adapters.append(adapter)
+
+    @property
+    def preferred_model_id(self) -> str | None:
+        return self._preferred_model_id
+
+    def set_preferred(self, model_id: str | None) -> None:
+        if model_id is not None and not any(
+            adapter.model_id == model_id for adapter in self._adapters
+        ):
+            raise ValueError(f"Unknown model: {model_id}")
+        self._preferred_model_id = model_id
 
     def available_models(self, capability: Capability | None = None) -> list[str]:
         return [
@@ -70,15 +82,19 @@ class ModelRouter:
         ]
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
+        compatible = [
+            adapter for adapter in self._adapters
+            if request.capability in adapter.capabilities and adapter.is_available()
+        ]
+        if self._preferred_model_id is not None:
+            compatible.sort(key=lambda item: item.model_id != self._preferred_model_id)
         failures: list[str] = []
-        for adapter in self._adapters:
-            if request.capability not in adapter.capabilities or not adapter.is_available():
-                continue
+        for adapter in compatible:
             try:
                 return adapter.generate(request)
-            except Exception as exc:  # noqa: BLE001 - try the next configured local adapter
+            except Exception as exc:  # noqa: BLE001 - fall back to another configured provider
                 failures.append(f"{adapter.model_id}: {exc}")
-        detail = "; ".join(failures) if failures else "no compatible local adapter is installed"
+        detail = "; ".join(failures) if failures else "no compatible provider is configured"
         raise NoModelAvailable(
             f"No healthy model for capability '{request.capability.value}': {detail}"
         )
