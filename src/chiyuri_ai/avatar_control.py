@@ -41,11 +41,14 @@ class AvatarAction:
             raise ValueError("Avatar action description is required")
         if not isinstance(self.required_scope, str) or not self.required_scope.strip():
             raise ValueError("Avatar action permission scope is required")
-        if not isinstance(self.parameters or {}, dict):
+        parameters = {} if self.parameters is None else self.parameters
+        if not isinstance(parameters, dict):
             raise ValueError("Avatar action parameters must be an object")
+        if not isinstance(self.target, str):
+            raise ValueError("Avatar action target must be text")
         try:
             encoded = json.dumps(
-                self.parameters or {}, ensure_ascii=False, allow_nan=False
+                parameters, ensure_ascii=False, allow_nan=False
             ).encode("utf-8")
         except (TypeError, ValueError) as exc:
             raise ValueError("Avatar action parameters must be valid JSON values") from exc

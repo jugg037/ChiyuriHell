@@ -87,6 +87,11 @@ def test_invalid_risk_and_non_boolean_approval_are_rejected():
 
 
 def test_avatar_action_parameters_are_bounded_json():
+    with pytest.raises(ValueError, match="parameters must be an object"):
+        AvatarAction(
+            "desktop.click", "Click", ActionRisk.REVERSIBLE, "desktop.control",
+            parameters=[],
+        ).validate()
     with pytest.raises(ValueError, match="valid JSON"):
         AvatarAction(
             "desktop.click",
