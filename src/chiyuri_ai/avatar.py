@@ -1,15 +1,11 @@
-"""Safe inventory and evolution proposals for Chiyuri's single persistent avatar.
-
-This module only inspects files and records proposals. It never executes Unity assets,
-rewrites an avatar project, downloads packages, or applies an upgrade automatically.
-"""
+"""Safe inventory and evolution proposals for Chiyuri's single persistent avatar."""
 from __future__ import annotations
 
 import json
 import os
 import re
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -53,8 +49,6 @@ class AvatarInventory:
 
 @dataclass(frozen=True, slots=True)
 class UpgradeCandidate:
-    """A researched asset awaiting review; candidate status is never auto-applied."""
-
     candidate_id: str
     title: str
     source_url: str
@@ -67,7 +61,7 @@ class UpgradeCandidate:
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", self.candidate_id):
             raise ValueError("Invalid upgrade candidate id")
         parsed = urlparse(self.source_url)
-        if parsed.scheme != "https" or not parsed.netloc:
+        if parsed.scheme != "https" or not parsed.hostname:
             raise ValueError("Upgrade source must be an HTTPS URL")
         if not self.title.strip() or not self.asset_format.strip() or not self.licence.strip():
             raise ValueError("Title, format and licence are required")
@@ -82,7 +76,6 @@ class AvatarProjectScanner:
         root = root.expanduser().resolve(strict=True)
         if not root.is_dir():
             raise ValueError("Avatar source must be a directory")
-
         assets: list[AvatarAsset] = []
         animations: list[str] = []
         controllers: list[str] = []
@@ -135,7 +128,6 @@ class AvatarProjectScanner:
                         )
                 elif suffix in TEXT_ASSETS and size > MAX_TEXT_BYTES:
                     warnings.append(f"Файл пропущен из-за размера: {relative}")
-
         sorted_parameters = sorted(parameters, key=str.casefold)
         toggles = [
             name for name in sorted_parameters
@@ -143,7 +135,7 @@ class AvatarProjectScanner:
         ]
         return AvatarInventory(
             project_root=str(root),
-            scanned_at=datetime.now(timezone.utc).isoformat(),
+            scanned_at=datetime.now(UTC).isoformat(),
             assets=sorted(assets, key=lambda item: item.relative_path.casefold()),
             animation_files=sorted(animations, key=str.casefold),
             animator_controllers=sorted(controllers, key=str.casefold),
@@ -164,8 +156,7 @@ class AvatarEvolutionStore:
         return self._write("inventory.json", inventory.to_dict())
 
     def save_candidate(self, candidate: UpgradeCandidate) -> Path:
-        path = self.directory / f"candidate-{candidate.candidate_id}.json"
-        return self._write(path.name, asdict(candidate))
+        return self._write(f"candidate-{candidate.candidate_id}.json", asdict(candidate))
 
     def list_candidates(self) -> list[UpgradeCandidate]:
         result: list[UpgradeCandidate] = []
