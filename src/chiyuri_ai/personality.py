@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict, dataclass, field
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 
 @dataclass(frozen=True, slots=True)
