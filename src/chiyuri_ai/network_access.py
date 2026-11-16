@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from http.client import HTTPException
+
 import ipaddress
 import json
-import socket
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -134,7 +135,7 @@ class SafeInternetClient:
             if not (content_type.startswith("text/") or content_type == "application/json"):
                 raise ValueError(f"Unsupported response content type: {content_type}")
             payload = response.read(self.max_bytes + 1)
-        except (OSError, TimeoutError, http.client.HTTPException) as exc:
+        except (OSError, TimeoutError, HTTPException) as exc:
             raise RuntimeError(f"Internet request failed: {exc}") from exc
         finally:
             connection.close()

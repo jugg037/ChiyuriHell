@@ -34,7 +34,9 @@
 - [x] Bounded HTTPS reader with approved-host policy.
 - [x] SearXNG search-provider adapter.
 - [ ] Persona Studio UI and cross-modal persona injection.
-- [x] Append-only SQLite audit log with secret redaction and mutation triggers.\n- [x] Permission-aware tool registry with validation, identity policy and pre-execution gating.\n- [ ] Permission UI and encrypted credential storage.
+- [x] Append-only SQLite audit log with secret redaction and mutation triggers.
+- [x] Permission-aware tool registry with validation, identity policy and pre-execution gating.
+- [ ] Permission UI and encrypted credential storage.
 - [ ] SSH / HTTP API / SMB / WebSocket device connectors.
 - [ ] Permission-aware Windows UI Automation.
 
@@ -57,6 +59,8 @@ tests exist; it does not imply a Unity project has been supplied or tested.
 - [x] Add deterministic deny rules for self-replication, remote self-deployment, covert
       persistence, concealment and owner-binding changes.
 - [x] Require user initiation plus explicit approval before private identity-state export.
-- [x] Add exact-host deny-by-default HTTPS egress policy with DNS-pinned public-IP\n      connections and approval for user-data transfer.\n- [ ] Enforce process-wide deny-by-default network egress with Windows Firewall integration.
+- [x] Add exact-host deny-by-default HTTPS egress policy with DNS-pinned public-IP
+      connections and approval for user-data transfer.
+- [ ] Enforce process-wide deny-by-default network egress with Windows Firewall integration.
 - [ ] Isolate model process from executable, permission-policy and audit-store writes.
 - [ ] Add signed update verification, tamper-evident audit storage and security integration tests.
