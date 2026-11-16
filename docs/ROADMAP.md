@@ -34,7 +34,7 @@
 - [x] Bounded HTTPS reader with approved-host policy.
 - [x] SearXNG search-provider adapter.
 - [ ] Persona Studio UI and cross-modal persona injection.
-- [ ] Permission UI, encrypted credential storage and append-only audit log.
+- [x] Append-only SQLite audit log with secret redaction and mutation triggers.\n- [x] Permission-aware tool registry with validation, identity policy and pre-execution gating.\n- [ ] Permission UI and encrypted credential storage.
 - [ ] SSH / HTTP API / SMB / WebSocket device connectors.
 - [ ] Permission-aware Windows UI Automation.
 

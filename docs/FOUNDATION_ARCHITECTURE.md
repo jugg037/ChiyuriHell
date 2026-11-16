@@ -63,3 +63,7 @@ and must be enforced by the host OS as well as application code.
 See `docs/OWNER_BOND_AND_IDENTITY_BOUNDARIES.md`. The Python policy is an initial
 application-layer guard; it is not a replacement for Windows Firewall rules, process
 isolation, filesystem ACLs or end-to-end security testing.
+
+
+## Tool execution and audit
+Every callable capability must be registered with a name, description, input validator, permission scope and risk. The registry checks identity policy and permission policy before calling a handler. Unknown tools and invalid inputs are denied. Decisions and outcomes are recorded in an append-only SQLite audit log with secret-field redaction and bounded metadata. SQLite triggers prevent ordinary update/delete operations; this is not tamper-proof against a process with direct database/file access, so production deployment still needs OS ACLs and external integrity protection.

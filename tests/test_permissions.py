@@ -1,7 +1,10 @@
 import pytest
 
 from chiyuri_ai.permissions import (
-    ActionRequest, ActionRisk, PermissionDecision, PermissionPolicy,
+    ActionRequest,
+    ActionRisk,
+    PermissionDecision,
+    PermissionPolicy,
 )
 
 
@@ -13,9 +16,9 @@ def test_read_only_and_reversible_actions_are_allowed_with_scope():
     assert policy.evaluate(move).decision is PermissionDecision.ALLOW
 
 
-@pytest.mark.parametrize("risk", [
-    ActionRisk.SENSITIVE, ActionRisk.DESTRUCTIVE, ActionRisk.EXTERNAL,
-])
+@pytest.mark.parametrize(
+    "risk", [ActionRisk.SENSITIVE, ActionRisk.DESTRUCTIVE, ActionRisk.EXTERNAL]
+)
 def test_sensitive_actions_require_explicit_approval(risk: ActionRisk):
     policy = PermissionPolicy({"files.write"})
     request = ActionRequest("action", "Do something", risk, "files.write")
