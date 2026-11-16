@@ -11,7 +11,9 @@ from enum import StrEnum
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
-from uuid import uuid4\n\nfrom chiyuri_ai.egress import EgressDenied, NetworkEgressPolicy
+from uuid import uuid4
+
+from chiyuri_ai.egress import EgressDenied, NetworkEgressPolicy
 
 
 class NetworkPermission(StrEnum):

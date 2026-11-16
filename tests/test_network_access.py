@@ -1,4 +1,6 @@
-import socket\n\nimport pytest
+import socket
+
+import pytest
 
 from chiyuri_ai.network_access import (
     DeviceRegistry,
