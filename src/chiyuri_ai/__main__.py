@@ -46,6 +46,31 @@ class ChatWorker(QThread):
             self.failed.emit(str(exc))
 
 
+class StatusWorker(QThread):
+    """Collects hardware telemetry and backend health without freezing the UI."""
+
+    completed = Signal(str)
+
+    def __init__(self, adapter: LlamaCppServerAdapter, monitor: ResourceMonitor):
+        super().__init__()
+        self.adapter = adapter
+        self.monitor = monitor
+
+    def run(self) -> None:
+        snapshot = self.monitor.snapshot()
+        ram_gb = snapshot.ram_available_bytes / (1024**3)
+        gpu = (
+            f" · {snapshot.gpu_name}: "
+            f"{snapshot.vram_free_bytes / (1024**3):.1f} GB VRAM свободно"
+            if snapshot.gpu_name and snapshot.vram_free_bytes is not None
+            else " · NVIDIA GPU не обнаружен"
+        )
+        engine = "llama.cpp: подключён" if self.adapter.is_available() else (
+            "llama.cpp: не подключён"
+        )
+        self.completed.emit(f"{engine} · RAM свободно: {ram_gb:.1f} GB{gpu}")
+
+
 class MainWindow(QMainWindow):
     """First usable local chat interface with persistent history."""
 
@@ -60,6 +85,7 @@ class MainWindow(QMainWindow):
         self.conversation_id = self.service.new_conversation()
         self.worker: ChatWorker | None = None
         self.monitor = ResourceMonitor()
+        self.status_worker: StatusWorker | None = None
 
         self.setWindowTitle(f"Chiyuri AI · {__version__}")
         self.resize(1120, 760)
@@ -147,20 +173,11 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Локальная модель недоступна")
 
     def update_status(self) -> None:
-        snapshot = self.monitor.snapshot()
-        ram_gb = snapshot.ram_available_bytes / (1024**3)
-        gpu = (
-            f" · {snapshot.gpu_name}: "
-            f"{snapshot.vram_free_bytes / (1024**3):.1f} GB VRAM свободно"
-            if snapshot.gpu_name and snapshot.vram_free_bytes is not None
-            else " · NVIDIA GPU не обнаружен"
-        )
-        engine = "llama.cpp: подключён" if self.chat_adapter.is_available() else (
-            "llama.cpp: не подключён"
-        )
-        self.statusBar().showMessage(
-            f"{engine} · RAM свободно: {ram_gb:.1f} GB{gpu}"
-        )
+        if self.status_worker is not None and self.status_worker.isRunning():
+            return
+        self.status_worker = StatusWorker(self.chat_adapter, self.monitor)
+        self.status_worker.completed.connect(self.statusBar().showMessage)
+        self.status_worker.start()
 
 
 def main() -> int:
