@@ -63,3 +63,28 @@ def test_specialist_tasks_are_bounded_and_unique():
             "task",
             tasks=[SpecialistTask(str(i), Capability.VISION, "inspect") for i in range(5)],
         )
+
+
+
+def test_invalid_plan_falls_back_to_a_normal_central_answer():
+    class InvalidPlanningAdapter(FakeAdapter):
+        def __init__(self):
+            super().__init__("central-1", frozenset({Capability.CHAT}), "")
+            self.calls = 0
+
+        def generate(self, request):
+            self.calls += 1
+            output = "not valid JSON" if self.calls == 1 else "Normal answer"
+            return GenerationResult(self.model_id, output)
+
+    router = ModelRouter()
+    central = InvalidPlanningAdapter()
+    vision = FakeAdapter("vision-1", frozenset({Capability.VISION}), "image data")
+    router.register(central)
+    router.register(vision)
+    router.set_preferred("central-1")
+
+    result = ModelCoordinator(router).respond("What is this?")
+
+    assert result.assistant_message == "Normal answer"
+    assert central.calls == 2

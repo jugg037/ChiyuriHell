@@ -33,6 +33,7 @@ def test_extra_research_context_is_passed_as_untrusted_system_context(tmp_path):
     )
 
     assert turn.assistant_message == "Ответ со ссылками"
+    assert turn.specialist_results == ()
     assert adapter.request.system_prompt.startswith("Ты — Чиюри")
     assert "недоверенные данные" in adapter.request.system_prompt
     assert "https://example.com" in adapter.request.system_prompt

@@ -14,6 +14,8 @@
 ## Stage 1 — local application core
 - [x] SQLite conversation memory with FTS5 search.
 - [x] Capability-based model adapter contract and router.
+- [x] Central coordinator automatically plans available specialist calls and synthesizes results.
+- [x] Conversation service routes user-facing turns through the central coordinator.
 - [x] Conversation orchestration service.
 - [x] CPU/RAM and optional NVIDIA VRAM telemetry.
 - [ ] Settings UI.
