@@ -47,3 +47,22 @@ Each model integration must record source, exact revision, quantization, licence
 ## Compatibility and packaging
 
 Target Windows 10 22H2 x64 and Windows 11 x64. Validate Python, Qt/PySide6, CUDA and inference-runtime combinations on CI and real hardware before freezing versions. Package the desktop app with a reproducible Windows build and installer only after the runtime is stable.
+
+
+## Persona system
+
+- Personality profiles are structured, versionable local JSON documents created from natural-language prompts (Russian is a first-class input language).
+- A profile contains identity, description, trait sliders, speaking style, values, boundaries and additional system guidance.
+- The same rendered persona prompt is supplied to text, voice, vision and media orchestration layers; modality-specific instructions are appended rather than replacing the persona.
+- Profile generation is a model-assisted transformation into validated JSON. The user reviews and activates the result; edits never silently rewrite the active profile.
+- Persona settings cannot grant tools, bypass permissions, or override platform, model, licence or safety constraints.
+
+## Internet and local-network access
+
+- Internet research is a separate capability with pluggable search providers and bounded HTTPS page readers. Search results and page contents are untrusted data, never executable instructions.
+- Network access is off until configured. Internet hosts must be explicitly approved by the user; requests are bounded by time, response size and content type.
+- LAN devices are enrolled explicitly in a local device registry. Each device receives independent discover, read and control grants.
+- Protocol integrations (SSH, HTTP APIs, SMB, WebSocket, media servers and future device adapters) implement a narrow connector contract. No generic arbitrary shell execution is exposed by default.
+- Device discovery is user-initiated and restricted to networks the user is authorized to administer. No background port scanning.
+- Control operations require per-action confirmation unless the user later creates a narrowly scoped trusted automation rule. Credentials belong in the OS credential store, never in profiles or Git.
+- All external actions must be attributable to a device, connector, permission grant and audit event.
