@@ -5,6 +5,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import socket
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from urllib.error import HTTPError, URLError
@@ -193,7 +194,7 @@ class HTTPApiDeviceConnector(DeviceConnector):
         self,
         timeout_seconds: float = 10,
         max_bytes: int = 1_000_000,
-        auth_headers: callable | None = None,
+        auth_headers: Callable[[NetworkDevice], dict[str, str]] | None = None,
     ) -> None:
         self.timeout_seconds = timeout_seconds
         self.max_bytes = max_bytes
