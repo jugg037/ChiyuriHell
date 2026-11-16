@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: chiyuri-ai-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     name: Python quality · ${{ matrix.os }} · Python ${{ matrix.python-version }}
