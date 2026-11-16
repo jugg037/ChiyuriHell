@@ -62,3 +62,23 @@ def test_launch_requires_exe(tmp_path: Path):
 
     with pytest.raises(OSError):
         launch_unity(editor, project)
+
+
+def test_discover_unity_editors_finds_and_sorts_versions(tmp_path: Path):
+    from chiyuri_ai.avatar_manager import discover_unity_editors
+
+    root = tmp_path / "Unity" / "Hub" / "Editor"
+    older = root / "2022.3.20f1" / "Editor" / "Unity.exe"
+    newer = root / "6000.0.10f1" / "Editor" / "Unity.exe"
+    older.parent.mkdir(parents=True)
+    newer.parent.mkdir(parents=True)
+    older.write_bytes(b"unity")
+    newer.write_bytes(b"unity")
+
+    assert discover_unity_editors((root,)) == [newer.resolve(), older.resolve()]
+
+
+def test_discover_unity_editors_ignores_missing_roots(tmp_path: Path):
+    from chiyuri_ai.avatar_manager import discover_unity_editors
+
+    assert discover_unity_editors((tmp_path / "not-installed",)) == []

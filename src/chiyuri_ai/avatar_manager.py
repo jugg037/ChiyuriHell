@@ -1,6 +1,8 @@
 """Desktop manager for inspecting a Unity avatar project with Chiyuri."""
 from __future__ import annotations
 
+import os
+import re
 import shutil
 import subprocess
 from importlib.resources import files
@@ -53,6 +55,52 @@ def install_inspector(root: Path) -> Path:
     return destination
 
 
+def discover_unity_editors(search_roots: tuple[Path, ...] | None = None) -> list[Path]:
+    """Find installed Unity Editors without launching Unity Hub or changing files."""
+    if search_roots is None:
+        roots: list[Path] = []
+        for variable in ("ProgramFiles", "ProgramFiles(x86)"):
+            value = os.environ.get(variable)
+            if value:
+                roots.append(Path(value) / "Unity/Hub/Editor")
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if local_app_data:
+            roots.append(Path(local_app_data) / "Programs/Unity Hub/Editor")
+        hub_editor = os.environ.get("UNITY_HUB_EDITOR_PATH")
+        if hub_editor:
+            roots.append(Path(hub_editor))
+        search_roots = tuple(roots)
+
+    discovered: set[Path] = set()
+    explicit = os.environ.get("UNITY_EDITOR_PATH")
+    if explicit:
+        candidate = Path(explicit).expanduser()
+        if candidate.is_file() and candidate.name.casefold() == "unity.exe":
+            discovered.add(candidate.resolve())
+
+    for root in search_roots:
+        try:
+            if not root.is_dir():
+                continue
+            direct = root / "Unity.exe"
+            if direct.is_file():
+                discovered.add(direct.resolve())
+            for candidate in root.glob("*/Editor/Unity.exe"):
+                if candidate.is_file():
+                    discovered.add(candidate.resolve())
+        except OSError:
+            continue
+
+    def version_key(path: Path) -> tuple[tuple[int, object], ...]:
+        version = path.parent.parent.name if path.parent.name.casefold() == "editor" else path.parent.name
+        return tuple(
+            (1, int(part)) if part.isdigit() else (0, part.casefold())
+            for part in re.split(r"(\d+)", version)
+        )
+
+    return sorted(discovered, key=version_key, reverse=True)
+
+
 def launch_unity(editor_executable: Path, project_root: Path) -> subprocess.Popen[bytes]:
     """Launch a user-selected Unity Editor executable for the selected project."""
     editor = editor_executable.expanduser().resolve(strict=True)
@@ -100,11 +148,13 @@ class AvatarManagerDialog(QDialog):
 
         choose_project = QPushButton("Выбрать Unity-проект")
         choose_editor = QPushButton("Выбрать Unity Editor")
+        detect_editor = QPushButton("Найти установленный Unity")
         scan_button = QPushButton("Проверить файлы")
         install_button = QPushButton("Установить инспектор")
         launch_button = QPushButton("Открыть проект в Unity")
         choose_project.clicked.connect(self.choose_project)
         choose_editor.clicked.connect(self.choose_editor)
+        detect_editor.clicked.connect(self.detect_editors)
         scan_button.clicked.connect(self.scan_project)
         install_button.clicked.connect(self.install)
         launch_button.clicked.connect(self.launch)
@@ -114,6 +164,7 @@ class AvatarManagerDialog(QDialog):
         project_row.addWidget(scan_button)
         editor_row = QHBoxLayout()
         editor_row.addWidget(choose_editor)
+        editor_row.addWidget(detect_editor)
         editor_row.addWidget(launch_button)
 
         layout = QVBoxLayout(self)
@@ -159,6 +210,28 @@ class AvatarManagerDialog(QDialog):
         if selected:
             self.editor_executable = Path(selected)
             self.editor_label.setText(str(self.editor_executable))
+
+    def detect_editors(self) -> None:
+        editors = discover_unity_editors()
+        if not editors:
+            QMessageBox.information(
+                self,
+                "Unity не найден",
+                "Автоматически найти Unity Editor не удалось. "
+                "Можно выбрать Unity.exe вручную.",
+            )
+            return
+        self.editor_executable = editors[0]
+        self.editor_label.setText(str(self.editor_executable))
+        self.report.append(
+            f"\\nНайдено установок Unity: {len(editors)}. "
+            f"Выбрана самая новая по номеру версии:\\n{self.editor_executable}"
+        )
+        if len(editors) > 1:
+            self.report.append(
+                "\\nДругие найденные установки:\\n"
+                + "\\n".join(str(path) for path in editors[1:])
+            )
 
     def scan_project(self) -> None:
         if self.project_root is None:
