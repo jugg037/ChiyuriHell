@@ -21,6 +21,7 @@ class GenerationRequest:
     capability: Capability
     prompt: str
     conversation_id: str | None = None
+    system_prompt: str = ""
     options: dict[str, object] = field(default_factory=dict)
 
 
