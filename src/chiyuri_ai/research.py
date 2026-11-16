@@ -90,7 +90,9 @@ class SearxNGSearchProvider:
             or parsed.hostname.startswith("192.168.")
             or parsed.hostname.startswith("172.16.")
         ):
-            raise ValueError("Plain HTTP is allowed only for an explicitly configured local instance")
+            raise ValueError(
+                "Plain HTTP is allowed only for an explicitly configured local instance"
+            )
         self.endpoint = urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", ""))
         self.timeout_seconds = timeout_seconds
         self.max_bytes = max_bytes

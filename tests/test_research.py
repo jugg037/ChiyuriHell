@@ -1,4 +1,10 @@
-from chiyuri_ai.research import InternetResearchService, SearchResult
+import pytest
+
+from chiyuri_ai.research import (
+    InternetResearchService,
+    SearchResult,
+    SearxNGSearchProvider,
+)
 
 
 class FakeSearchProvider:
@@ -48,9 +54,6 @@ def test_searxng_parses_sources_and_discards_unsafe_links():
 
 
 def test_searxng_requires_valid_endpoint():
-    import pytest
-    from chiyuri_ai.research import SearxNGSearchProvider
-
     with pytest.raises(ValueError):
         SearxNGSearchProvider("file:///etc/passwd")
     with pytest.raises(ValueError):
