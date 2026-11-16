@@ -25,7 +25,14 @@ class StoragePaths:
     def avatars(self) -> Path:
         return self.library / "Avatars"
 
+    @property
+    def providers(self) -> Path:
+        return self.library / "Providers"
+
     def create(self) -> None:
-        paths = (self.root, self.models, self.library, self.cache, self.backups, self.avatars)
+        paths = (
+            self.root, self.models, self.library, self.cache, self.backups,
+            self.avatars, self.providers,
+        )
         for path in paths:
             path.mkdir(parents=True, exist_ok=True)

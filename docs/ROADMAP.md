@@ -21,6 +21,9 @@
 
 ## Stage 2 — model integrations
 - [x] llama.cpp local chat adapter (model manager remains pending).
+- [x] Generic OpenAI-compatible HTTPS chat adapter.
+- [x] Private provider configuration store (API-key values are not persisted).
+- [ ] Provider Manager UI and connection test.
 - [ ] Vision adapter and image understanding.
 - [ ] ComfyUI image workflow adapter.
 - [ ] ComfyUI video workflow adapter and cancellable queue.
@@ -50,10 +53,6 @@
 - [ ] Upgrade staging, preview, approval, versioning and rollback.
 - [ ] Automated research and compatibility scoring for candidate assets.
 
-The roadmap marks only code already committed. A checked item means its code and automated
-tests exist; it does not imply a Unity project has been supplied or tested.
-
-
 ## Stage 5 — owner-bound identity and safety foundations
 - [x] Define user-primary identity principles and healthy disagreement boundaries.
 - [x] Add deterministic deny rules for self-replication, remote self-deployment, covert
@@ -64,3 +63,8 @@ tests exist; it does not imply a Unity project has been supplied or tested.
 - [ ] Enforce process-wide deny-by-default network egress with Windows Firewall integration.
 - [ ] Isolate model process from executable, permission-policy and audit-store writes.
 - [ ] Add signed update verification, tamper-evident audit storage and security integration tests.
+
+The roadmap tracks committed code only. A checked item means its code and automated tests exist;
+it does not imply that a real provider account, Unity project or Windows installation has been
+tested. Chiyuri uses connected AI providers; training a proprietary foundation model is out of
+scope.
