@@ -88,7 +88,10 @@ class HuggingFaceCatalog:
             filename = getattr(sibling, "rfilename", "")
             if not isinstance(filename, str) or not filename.lower().endswith(".gguf"):
                 continue
-            _validate_filename(filename)
+            try:
+                _validate_filename(filename)
+            except ValueError:
+                continue
             size = getattr(sibling, "size", None)
             lfs = getattr(sibling, "lfs", None)
             if size is None and lfs is not None:
@@ -96,7 +99,14 @@ class HuggingFaceCatalog:
             files.append(
                 HubModelFile(filename=filename, size_bytes=size if isinstance(size, int) else None)
             )
-        return sorted(files, key=lambda item: (item.size_bytes is None, item.size_bytes or 0, item.filename))
+        return sorted(
+            files,
+            key=lambda item: (
+                item.size_bytes is None,
+                item.size_bytes or 0,
+                item.filename,
+            ),
+        )
 
 
 class HuggingFaceModelDownloader:
@@ -157,6 +167,13 @@ def _validate_repo_id(repo_id: str) -> None:
 def _validate_filename(filename: str) -> None:
     if not isinstance(filename, str) or not filename or len(filename) > 512:
         raise ValueError("Invalid model filename")
+    if chr(92) in filename:
+        raise ValueError("Model filename must use safe POSIX path separators")
+    raw_parts = filename.split("/")
     path = PurePosixPath(filename)
-    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+    if (
+        path.is_absolute()
+        or any(part in {"", ".", ".."} for part in raw_parts)
+        or any(part in {"", ".", ".."} for part in path.parts)
+    ):
         raise ValueError("Model filename must be a safe relative path")

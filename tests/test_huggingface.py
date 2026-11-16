@@ -78,6 +78,10 @@ def test_repo_and_filename_validation():
         _validate_filename("../model.gguf")
     with pytest.raises(ValueError):
         _validate_filename("/absolute/model.gguf")
+    with pytest.raises(ValueError):
+        _validate_filename("folder" + chr(92) + ".." + chr(92) + "escape.gguf")
+    with pytest.raises(ValueError):
+        _validate_filename("folder//model.gguf")
 
 
 def test_downloader_rejects_non_gguf_before_network(tmp_path):

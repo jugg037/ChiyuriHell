@@ -209,8 +209,7 @@ class ModelLibraryDialog(QDialog):
 
     def _download_complete(self, path: str) -> None:
         self.status.setText("Загрузка завершена.")
-        self.details.setText(f"Файл сохранён:
-{path}")
+        self.details.setText(f"Файл сохранён:\n{path}")
 
     def _show_error(self, error: str) -> None:
         self.status.setText("Операция не выполнена.")
