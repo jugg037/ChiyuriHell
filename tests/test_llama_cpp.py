@@ -7,6 +7,7 @@ from chiyuri_ai.models import Capability, GenerationRequest
 
 
 class FakeLlamaHandler(BaseHTTPRequestHandler):
+    last_payload = None
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
@@ -14,7 +15,7 @@ class FakeLlamaHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         size = int(self.headers["Content-Length"])
-        json.loads(self.rfile.read(size))
+        type(self).last_payload = json.loads(self.rfile.read(size))
         response = json.dumps({
             "choices": [{"message": {"content": "Локальный ответ"}}],
             "usage": {"total_tokens": 4},
@@ -39,9 +40,14 @@ def test_llama_cpp_adapter_health_and_chat():
             model_id="test-model",
         )
         assert adapter.is_available()
-        result = adapter.generate(GenerationRequest(Capability.CHAT, "Привет"))
+        result = adapter.generate(GenerationRequest(
+            Capability.CHAT, "Привет", system_prompt="Ты — Чиюри"
+        ))
         assert result.model_id == "test-model"
         assert result.output == "Локальный ответ"
+        assert FakeLlamaHandler.last_payload["messages"][0] == {
+            "role": "system", "content": "Ты — Чиюри"
+        }
     finally:
         server.shutdown()
         thread.join(timeout=2)
