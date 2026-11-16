@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import http.client
 import ipaddress
 import json
 import socket
+import ssl
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -225,6 +227,11 @@ class NetworkActionService:
         except KeyError as exc:
             raise RuntimeError(f"No connector installed for protocol '{device.protocol}'") from exc
 
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 class HTTPApiDeviceConnector(DeviceConnector):
