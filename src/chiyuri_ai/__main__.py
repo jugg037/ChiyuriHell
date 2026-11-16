@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QPushButton,
+    QInputDialog,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -20,8 +21,12 @@ from PySide6.QtWidgets import (
 from chiyuri_ai import __version__
 from chiyuri_ai.llama_cpp import LlamaCppServerAdapter
 from chiyuri_ai.memory import ConversationMemory
-from chiyuri_ai.models import ModelRouter
-from chiyuri_ai.personality import PersonalityProfile, PersonalityStore
+from chiyuri_ai.models import Capability, GenerationRequest, ModelRouter
+from chiyuri_ai.personality import (
+    PersonalityProfile,
+    PersonalityService,
+    PersonalityStore,
+)
 from chiyuri_ai.resources import ResourceMonitor
 from chiyuri_ai.service import ConversationService
 from chiyuri_ai.storage import StoragePaths
@@ -44,6 +49,32 @@ class ChatWorker(QThread):
             turn = self.service.send(self.conversation_id, self.message)
             self.completed.emit(turn.assistant_message, turn.model_id)
         except Exception as exc:  # noqa: BLE001 - surface backend failures in the chat
+            self.failed.emit(str(exc))
+
+
+class PersonaWorker(QThread):
+    """Creates a profile from a natural-language prompt without freezing Qt."""
+
+    completed = Signal(str, str)
+    failed = Signal(str)
+
+    def __init__(self, store: PersonalityStore, router: ModelRouter, prompt: str):
+        super().__init__()
+        self.store = store
+        self.router = router
+        self.prompt = prompt
+
+    def run(self) -> None:
+        try:
+            service = PersonalityService(self.store)
+            profile = service.create_from_prompt(
+                self.prompt,
+                lambda design_prompt: self.router.generate(
+                    GenerationRequest(Capability.CHAT, design_prompt)
+                ).output,
+            )
+            self.completed.emit(profile.profile_id, profile.name)
+        except Exception as exc:  # noqa: BLE001 - report model/profile errors in the UI
             self.failed.emit(str(exc))
 
 
@@ -108,6 +139,7 @@ class MainWindow(QMainWindow):
         )
         self.conversation_id = self.service.new_conversation()
         self.worker: ChatWorker | None = None
+        self.persona_worker: PersonaWorker | None = None
         self.monitor = ResourceMonitor()
         self.status_worker: StatusWorker | None = None
 
@@ -127,10 +159,13 @@ class MainWindow(QMainWindow):
         self.input.setPlaceholderText("Напиши сообщение…")
         self.input.returnPressed.connect(self.send_message)
         self.send_button = QPushButton("Отправить")
+        self.persona_button = QPushButton("Настроить характер")
+        self.persona_button.clicked.connect(self.create_personality)
         self.send_button.clicked.connect(self.send_message)
 
         input_row = QHBoxLayout()
         input_row.addWidget(self.input, 1)
+        input_row.addWidget(self.persona_button)
         input_row.addWidget(self.send_button)
 
         layout = QVBoxLayout()
@@ -166,6 +201,44 @@ class MainWindow(QMainWindow):
         self.status_timer.timeout.connect(self.update_status)
         self.status_timer.start(5000)
         self.update_status()
+
+    def create_personality(self) -> None:
+        if self.worker is not None and self.worker.isRunning():
+            self.statusBar().showMessage("Дождись завершения текущего ответа")
+            return
+        if self.persona_worker is not None and self.persona_worker.isRunning():
+            return
+        prompt, accepted = QInputDialog.getMultiLineText(
+            self,
+            "Personality Studio",
+            "Опиши характер Чиюри обычным русским языком:",
+        )
+        if not accepted or not prompt.strip():
+            return
+        self.persona_button.setEnabled(False)
+        self.statusBar().showMessage("Формирую профиль личности…")
+        self.persona_worker = PersonaWorker(self.personality_store, self.router, prompt)
+        self.persona_worker.completed.connect(self.on_personality_created)
+        self.persona_worker.failed.connect(self.on_personality_error)
+        self.persona_worker.finished.connect(
+            lambda: self.persona_button.setEnabled(True)
+        )
+        self.persona_worker.start()
+
+    def on_personality_created(self, profile_id: str, profile_name: str) -> None:
+        self.active_personality = self.personality_store.load(profile_id)
+        self.memory.set_setting("active_personality", profile_id)
+        self.service.system_prompt_provider = self.active_personality.to_prompt
+        self.statusBar().showMessage(
+            f"Активирована личность: {profile_name}", 10000
+        )
+        self.chat.append(
+            f'<p style="color:#ff7898"><b>Чиюри:</b> '
+            f"Мой новый профиль «{html.escape(profile_name)}» сохранён и активирован.</p>"
+        )
+
+    def on_personality_error(self, error: str) -> None:
+        self.statusBar().showMessage(f"Не удалось создать профиль: {error}", 12000)
 
     def send_message(self) -> None:
         message = self.input.text().strip()
