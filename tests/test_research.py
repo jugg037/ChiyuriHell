@@ -63,9 +63,6 @@ def test_searxng_requires_valid_endpoint():
 
 
 def test_searxng_query_validation():
-    import pytest
-    from chiyuri_ai.research import SearxNGSearchProvider
-
     provider = SearxNGSearchProvider("https://search.example")
     with pytest.raises(ValueError):
         provider.search(" ")
