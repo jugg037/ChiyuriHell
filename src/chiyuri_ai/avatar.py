@@ -6,6 +6,7 @@ rewrites an avatar project, downloads packages, or applies an upgrade automatica
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -19,14 +20,13 @@ SUPPORTED_ASSETS = {
 }
 TEXT_ASSETS = {".prefab", ".controller", ".anim", ".asset", ".mat", ".unity"}
 IGNORED_DIRS = {
-    ".git", "library", "temp", "obj", "logs", "us er settings",
-    "user settings", "build", "builds", ".vs",
+    ".git", "library", "temp", "obj", "logs", "user settings", "build", "builds", ".vs",
 }
 MAX_TEXT_BYTES = 2 * 1024 * 1024
 PARAMETER_BLOCK = re.compile(
-    r"m_AnimatorParameters:\\s*(.*?)(?=\\n\\s*m_AnimatorLayers:|\\Z)", re.DOTALL
+    r"m_AnimatorParameters:\s*(.*?)(?=\n\s*m_AnimatorLayers:|\Z)", re.DOTALL
 )
-PARAMETER_NAME = re.compile(r"^\\s*- m_Name:\\s*(.+?)\\s*$", re.MULTILINE)
+PARAMETER_NAME = re.compile(r"^\s*- m_Name:\s*(.+?)\s*$", re.MULTILINE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,7 +88,7 @@ class AvatarProjectScanner:
         controllers: list[str] = []
         parameters: set[str] = set()
         warnings: list[str] = []
-        for current, dirs, files in __import__("os").walk(root, followlinks=False):
+        for current, dirs, files in os.walk(root, followlinks=False):
             current_path = Path(current)
             dirs[:] = sorted(
                 name for name in dirs
