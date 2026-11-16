@@ -22,10 +22,18 @@
 - [ ] ComfyUI video workflow adapter and cancellable queue.
 - [ ] Speech-to-text, VAD and text-to-speech adapters.
 
-## Stage 3 — Windows assistant
-- [ ] Permission-aware Windows UI Automation.
-- [ ] User-visible action confirmations and audit log.
-- [ ] Shared memory and persona settings across all capabilities.
+## Stage 3 — unified personality and connected assistant
+- [x] Structured personality profiles and local JSON storage.
+- [x] Russian-prompt-to-profile service contract (model callback + JSON validation).
+- [x] Explicit LAN device registry with separate read/control grants.
+- [x] Confirmation gate for device control operations.
+- [x] Bounded HTTPS reader with approved-host policy.
+- [ ] Search-provider integration and cited web research.
+- [ ] Persona Studio UI, profile preview and active-profile selection.
+- [ ] Permission UI, encrypted credential storage and append-only audit log.
+- [ ] SSH / HTTP API / SMB / WebSocket device connectors.
+- [ ] Permission-aware Windows UI Automation and visible action confirmations.
+- [ ] Inject one active persona consistently into chat, voice, vision and media tasks.
 
 ## Stage 4 — packaging and first usable build
 - [ ] Windows x64 portable build.
