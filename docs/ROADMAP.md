@@ -50,3 +50,13 @@
 
 The roadmap marks only code already committed. A checked item means its code and automated
 tests exist; it does not imply a Unity project has been supplied or tested.
+
+
+## Stage 5 — owner-bound identity and safety foundations
+- [x] Define user-primary identity principles and healthy disagreement boundaries.
+- [x] Add deterministic deny rules for self-replication, remote self-deployment, covert
+      persistence, concealment and owner-binding changes.
+- [x] Require user initiation plus explicit approval before private identity-state export.
+- [ ] Enforce deny-by-default network egress with Windows Firewall integration.
+- [ ] Isolate model process from executable, permission-policy and audit-store writes.
+- [ ] Add signed update verification, tamper-evident audit storage and security integration tests.

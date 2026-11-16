@@ -36,6 +36,7 @@ class PermissionResult:
 
 class PermissionPolicy:
     """Default-deny scopes; read and reversible actions can run autonomously."""
+
     AUTO_ALLOWED_RISKS = frozenset({ActionRisk.READ_ONLY, ActionRisk.REVERSIBLE})
 
     def __init__(self, granted_scopes: set[str] | frozenset[str] = frozenset()) -> None:
@@ -45,7 +46,10 @@ class PermissionPolicy:
         if not request.action_id.strip() or not request.description.strip():
             return PermissionResult(PermissionDecision.DENY, "Action metadata is incomplete")
         if not request.required_scope or request.required_scope not in self.granted_scopes:
-            return PermissionResult(PermissionDecision.DENY, "Required permission scope is not granted")
+            return PermissionResult(
+                PermissionDecision.DENY,
+                "Required permission scope is not granted",
+            )
         if request.risk in self.AUTO_ALLOWED_RISKS:
             return PermissionResult(PermissionDecision.ALLOW, "Granted scope permits this action")
         return PermissionResult(

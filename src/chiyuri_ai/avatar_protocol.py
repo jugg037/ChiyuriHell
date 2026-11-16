@@ -8,11 +8,19 @@ from uuid import uuid4
 
 PROTOCOL_VERSION = 1
 MAX_MESSAGE_BYTES = 256 * 1024
-ALLOWED_MESSAGE_TYPES = frozenset({
-    "avatar.hello", "avatar.state", "avatar.capabilities", "avatar.play_action",
-    "avatar.set_expression", "avatar.set_prop", "avatar.action_result",
-    "desktop.action_started", "desktop.action_completed",
-})
+ALLOWED_MESSAGE_TYPES = frozenset(
+    {
+        "avatar.hello",
+        "avatar.state",
+        "avatar.capabilities",
+        "avatar.play_action",
+        "avatar.set_expression",
+        "avatar.set_prop",
+        "avatar.action_result",
+        "desktop.action_started",
+        "desktop.action_completed",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,25 +45,25 @@ class AvatarMessage:
 
     @classmethod
     def from_json(cls, raw: str) -> AvatarMessage:
+        if not isinstance(raw, str):
+            raise ValueError("Avatar message must be text")
         if len(raw.encode("utf-8")) > MAX_MESSAGE_BYTES:
             raise ValueError("Avatar message exceeds the size limit")
         try:
             data = json.loads(raw)
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, UnicodeEncodeError) as exc:
             raise ValueError("Invalid avatar message JSON") from exc
         expected = {"message_type", "payload", "request_id", "version"}
         if not isinstance(data, dict) or set(data) != expected:
             raise ValueError("Avatar message has an invalid shape")
-        if not isinstance(data["payload"], dict):
-            raise ValueError("Avatar payload must be an object")
         message = cls(data["message_type"], data["payload"], data["request_id"], data["version"])
         message.validate()
         return message
 
     def validate(self) -> None:
-        if self.version != PROTOCOL_VERSION:
+        if type(self.version) is not int or self.version != PROTOCOL_VERSION:
             raise ValueError("Unsupported avatar protocol version")
-        if self.message_type not in ALLOWED_MESSAGE_TYPES:
+        if not isinstance(self.message_type, str) or self.message_type not in ALLOWED_MESSAGE_TYPES:
             raise ValueError("Unsupported avatar message type")
         if not isinstance(self.request_id, str) or not re.fullmatch(
             r"[A-Za-z0-9_-]{1,64}", self.request_id

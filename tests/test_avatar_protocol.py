@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from chiyuri_ai.avatar_protocol import AvatarMessage, MAX_MESSAGE_BYTES
+from chiyuri_ai.avatar_protocol import MAX_MESSAGE_BYTES, AvatarMessage
 
 
 def test_avatar_protocol_round_trip():
@@ -32,3 +32,32 @@ def test_avatar_protocol_rejects_oversized_payload():
 def test_avatar_protocol_rejects_malformed_shape():
     with pytest.raises(ValueError, match="invalid shape"):
         AvatarMessage.from_json('{"message_type":"avatar.hello"}')
+
+
+@pytest.mark.parametrize("bad_type", [[], {}, None, 3])
+def test_avatar_protocol_rejects_non_string_message_type(bad_type):
+    raw = json.dumps({
+        "message_type": bad_type, "payload": {}, "request_id": "req_1", "version": 1,
+    })
+    with pytest.raises(ValueError, match="Unsupported avatar message type"):
+        AvatarMessage.from_json(raw)
+
+
+@pytest.mark.parametrize("bad_version", [True, "1", 1.0, None])
+def test_avatar_protocol_rejects_non_integer_version(bad_version):
+    raw = json.dumps({
+        "message_type": "avatar.hello", "payload": {}, "request_id": "req_1",
+        "version": bad_version,
+    })
+    with pytest.raises(ValueError, match="Unsupported avatar protocol version"):
+        AvatarMessage.from_json(raw)
+
+
+def test_avatar_protocol_rejects_non_object_payload_and_request_id():
+    for payload, request_id in [([], "req_1"), ({}, []), ({}, None)]:
+        raw = json.dumps({
+            "message_type": "avatar.hello", "payload": payload,
+            "request_id": request_id, "version": 1,
+        })
+        with pytest.raises(ValueError):
+            AvatarMessage.from_json(raw)
