@@ -92,7 +92,11 @@ def discover_unity_editors(search_roots: tuple[Path, ...] | None = None) -> list
             continue
 
     def version_key(path: Path) -> tuple[tuple[int, object], ...]:
-        version = path.parent.parent.name if path.parent.name.casefold() == "editor" else path.parent.name
+        version = (
+            path.parent.parent.name
+            if path.parent.name.casefold() == "editor"
+            else path.parent.name
+        )
         return tuple(
             (1, int(part)) if part.isdigit() else (0, part.casefold())
             for part in re.split(r"(\d+)", version)
