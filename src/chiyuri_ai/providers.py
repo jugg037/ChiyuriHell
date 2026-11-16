@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from chiyuri_ai import egress
+import chiyuri_ai.egress as egress
 from chiyuri_ai.models import Capability, GenerationRequest, GenerationResult
 
 
