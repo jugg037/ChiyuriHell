@@ -35,6 +35,8 @@ class AvatarAction:
     def validate(self) -> None:
         if not isinstance(self.action_id, str) or not _ACTION_ID.fullmatch(self.action_id):
             raise ValueError("Invalid avatar action id")
+        if not isinstance(self.risk, ActionRisk):
+            raise ValueError("Avatar action risk must be a valid ActionRisk")
         if not isinstance(self.description, str) or not self.description.strip():
             raise ValueError("Avatar action description is required")
         if not isinstance(self.required_scope, str) or not self.required_scope.strip():
@@ -85,6 +87,8 @@ class AvatarActionGateway:
         self.permission_policy = permission_policy
 
     def execute(self, action: AvatarAction, *, approved: bool = False) -> AvatarExecution:
+        if type(approved) is not bool:
+            raise ValueError("Approval state must be boolean")
         action.validate()
         request_id = str(uuid4())
         if action.action_id not in self.runtime.capabilities:
@@ -107,8 +111,11 @@ class AvatarActionGateway:
             return AvatarExecution(request_id, "approval_required", permission.reason)
 
         # The only execution path is the avatar runtime. No direct desktop fallback exists.
-        return self.runtime.execute_action(
+        result = self.runtime.execute_action(
             action.action_id,
             action.parameters or {},
             request_id,
         )
+        if not isinstance(result, AvatarExecution) or result.request_id != request_id:
+            raise RuntimeError("Avatar runtime returned an invalid action result")
+        return result

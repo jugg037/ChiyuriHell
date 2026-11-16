@@ -33,7 +33,4 @@ shutdown, disconnect and uninstall remain authoritative.
 
 ## Current implementation boundary
 
-This change introduces tested Python contracts and orchestration logic. It does
-not yet connect a live Unity avatar, implement a desktop input adapter, inspect
-a supplied Unity project, or provide working avatar movement. Those require
-the Unity-side bridge/runtime and the actual avatar project assets.
+This change includes a read-only Unity Editor inspector prototype that exports Animator parameters, layers, states, transitions, Blend Tree children and component type names. It has not yet been compiled against the user's Unity/VRChat SDK project. The live runtime bridge, desktop input adapter and synchronized avatar movement are still pending.

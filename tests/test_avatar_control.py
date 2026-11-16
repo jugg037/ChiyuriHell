@@ -74,6 +74,18 @@ def test_missing_permission_scope_denies_even_if_approved():
     assert avatar.calls == []
 
 
+def test_invalid_risk_and_non_boolean_approval_are_rejected():
+    avatar = FakeAvatar()
+    gateway = AvatarActionGateway(avatar, PermissionPolicy({"desktop.control"}))
+    action = AvatarAction("desktop.click", "Click", "external", "desktop.control")
+    with pytest.raises(ValueError, match="risk"):
+        gateway.execute(action)
+    valid = AvatarAction("desktop.click", "Click", ActionRisk.REVERSIBLE, "desktop.control")
+    with pytest.raises(ValueError, match="boolean"):
+        gateway.execute(valid, approved="yes")
+    assert avatar.calls == []
+
+
 def test_avatar_action_parameters_are_bounded_json():
     with pytest.raises(ValueError, match="valid JSON"):
         AvatarAction(
