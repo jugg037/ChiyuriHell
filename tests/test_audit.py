@@ -43,5 +43,6 @@ def test_audit_log_is_append_only_at_database_level(tmp_path):
 
 def test_audit_metadata_is_bounded(tmp_path):
     log = AuditLog(tmp_path / "audit.sqlite3")
-    event = log.append(action_id="test", metadata={"blob": "x" * 20000})
+    metadata = {f"blob_{index}": "x" * 512 for index in range(100)}
+    event = log.append(action_id="test", metadata=metadata)
     assert event.metadata == {"truncated": True, "reason": "metadata size limit"}
