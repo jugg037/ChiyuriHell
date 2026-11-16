@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import ipaddress
+import json
 import socket
 from dataclasses import dataclass, field
 from enum import StrEnum
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from uuid import uuid4
 
@@ -177,3 +179,83 @@ class NetworkActionService:
             return self.connectors[device.protocol]
         except KeyError as exc:
             raise RuntimeError(f"No connector installed for protocol '{device.protocol}'") from exc
+
+
+
+class HTTPApiDeviceConnector(DeviceConnector):
+    """Bounded REST connector for explicitly enrolled local devices and services.
+
+    Reads use GET /<resource>. Controls use POST /actions/<action> and are gated
+    by NetworkActionService's explicit confirmation requirement.
+    """
+
+    def __init__(
+        self,
+        timeout_seconds: float = 10,
+        max_bytes: int = 1_000_000,
+        auth_headers: callable | None = None,
+    ) -> None:
+        self.timeout_seconds = timeout_seconds
+        self.max_bytes = max_bytes
+        self.auth_headers = auth_headers or (lambda _device: {})
+        self._opener = build_opener(_NoRedirect)
+
+    @staticmethod
+    def _base_url(device: NetworkDevice) -> str:
+        parsed = urlsplit(device.endpoint)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("Device endpoint must be an absolute HTTP(S) URL")
+        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError("Device endpoint cannot contain credentials, query or fragment")
+        if parsed.scheme == "http":
+            host = parsed.hostname.lower()
+            try:
+                address = ipaddress.ip_address(host)
+                local = address.is_private or address.is_loopback or address.is_link_local
+            except ValueError:
+                local = host in {"localhost"} or host.endswith((".local", ".lan"))
+            if not local:
+                raise NetworkAccessDenied("Plain HTTP is allowed only for local devices")
+        return device.endpoint.rstrip("/")
+
+    @classmethod
+    def _resource_url(cls, device: NetworkDevice, resource: str) -> str:
+        if not resource.strip() or resource.startswith("//"):
+            raise ValueError("A relative device resource path is required")
+        parsed = urlsplit(resource)
+        segments = resource.strip("/").split("/")
+        if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment:
+            raise ValueError("Device resource must be a relative path without query or fragment")
+        if any(segment in {".", ".."} for segment in segments):
+            raise ValueError("Path traversal is not allowed")
+        suffix = "/".join(quote(segment, safe="") for segment in segments)
+        return f"{cls._base_url(device)}/{suffix}"
+
+    def _request(self, device: NetworkDevice, path: str, data: bytes | None = None) -> str:
+        headers = {"Accept": "application/json, text/plain", **self.auth_headers(device)}
+        if data is not None:
+            headers["Content-Type"] = "application/json"
+        request = Request(
+            path,
+            data=data,
+            headers=headers,
+            method="POST" if data is not None else "GET",
+        )
+        try:
+            with self._opener.open(request, timeout=self.timeout_seconds) as response:
+                payload = response.read(self.max_bytes + 1)
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            raise RuntimeError(f"Device API request failed: {exc}") from exc
+        if len(payload) > self.max_bytes:
+            raise ValueError("Device API response exceeded the configured size limit")
+        return payload.decode("utf-8", errors="replace") or "OK"
+
+    def read(self, device: NetworkDevice, resource: str) -> str:
+        return self._request(device, self._resource_url(device, resource))
+
+    def control(self, device: NetworkDevice, action: str, payload: dict[str, object]) -> str:
+        if not action.strip() or "/" in action or action in {".", ".."}:
+            raise ValueError("A single safe action name is required")
+        url = self._resource_url(device, f"actions/{action}")
+        body = json.dumps(payload).encode("utf-8")
+        return self._request(device, url, body)
