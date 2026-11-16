@@ -18,7 +18,10 @@ dev = ["pytest>=8,<10", "ruff>=0.9,<1", "pyinstaller>=6.10,<7"]
 [project.scripts]
 chiyuri-ai = "chiyuri_ai.__main__:main"
 
-[tool.setuptools.package-data]\nchiyuri_ai = ["resources/*.cs"]\n\n[tool.setuptools.packages.find]
+[tool.setuptools.package-data]
+chiyuri_ai = ["resources/*.cs"]
+
+[tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
