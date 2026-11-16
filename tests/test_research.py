@@ -26,3 +26,45 @@ def test_research_service_validates_query_and_limit():
         service.search(" ")
     with pytest.raises(ValueError):
         service.search("query", limit=50)
+
+
+def test_searxng_parses_sources_and_discards_unsafe_links():
+    from chiyuri_ai.research import SearxNGSearchProvider
+
+    results = SearxNGSearchProvider._parse_results(
+        {
+            "results": [
+                {"title": "Good", "url": "https://example.com/a", "content": "Snippet"},
+                {"title": "Bad", "url": "javascript:alert(1)", "content": "No"},
+                {"title": "No URL", "content": "No"},
+            ]
+        },
+        5,
+    )
+
+    assert len(results) == 1
+    assert results[0].title == "Good"
+    assert results[0].provider == "searxng"
+
+
+def test_searxng_requires_valid_endpoint():
+    import pytest
+    from chiyuri_ai.research import SearxNGSearchProvider
+
+    with pytest.raises(ValueError):
+        SearxNGSearchProvider("file:///etc/passwd")
+    with pytest.raises(ValueError):
+        SearxNGSearchProvider("https://user:password@example.com")
+    with pytest.raises(ValueError):
+        SearxNGSearchProvider("http://example.com")
+
+
+def test_searxng_query_validation():
+    import pytest
+    from chiyuri_ai.research import SearxNGSearchProvider
+
+    provider = SearxNGSearchProvider("https://search.example")
+    with pytest.raises(ValueError):
+        provider.search(" ")
+    with pytest.raises(ValueError):
+        provider.search("query", limit=99)
