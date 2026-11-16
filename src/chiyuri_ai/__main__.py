@@ -211,10 +211,12 @@ class MainWindow(QMainWindow):
         self.web_button = QPushButton("Поиск в интернете")
         self.provider_button = QPushButton("ИИ-провайдеры")
         self.model_library_button = QPushButton("Библиотека моделей")
+        self.avatar_button = QPushButton("Аватар")
         self.persona_button.clicked.connect(self.create_personality)
         self.web_button.clicked.connect(self.search_web)
         self.provider_button.clicked.connect(self.manage_providers)
         self.model_library_button.clicked.connect(self.open_model_library)
+        self.avatar_button.clicked.connect(self.open_avatar_manager)
         self.send_button.clicked.connect(self.send_message)
 
         input_row = QHBoxLayout()
@@ -223,6 +225,7 @@ class MainWindow(QMainWindow):
         input_row.addWidget(self.persona_button)
         input_row.addWidget(self.provider_button)
         input_row.addWidget(self.model_library_button)
+        input_row.addWidget(self.avatar_button)
         input_row.addWidget(self.send_button)
 
         layout = QVBoxLayout()
@@ -270,6 +273,10 @@ class MainWindow(QMainWindow):
 
     def open_model_library(self) -> None:
         dialog = ModelLibraryDialog(self.paths.models, self)
+        dialog.exec()
+
+    def open_avatar_manager(self) -> None:
+        dialog = AvatarManagerDialog(self.paths.avatars, self)
         dialog.exec()
 
     def manage_providers(self) -> None:
