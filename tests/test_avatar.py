@@ -65,3 +65,49 @@ def test_inventory_snapshot_is_saved_atomically(tmp_path: Path):
 
     assert saved.is_file()
     assert not saved.with_suffix(".json.tmp").exists()
+
+
+
+def test_load_unity_inventory_validates_and_persists_report(tmp_path: Path):
+    import json
+
+    from chiyuri_ai.avatar import load_unity_inventory
+
+    report = tmp_path / "avatar.json"
+    data = {
+        "schemaVersion": 1,
+        "avatarName": "Chiyuri",
+        "unityVersion": "2022.3",
+        "componentTypes": ["Animator"],
+        "toggleCandidates": ["Hat_Toggle"],
+        "animators": [{"hierarchyPath": "Chiyuri", "parameters": [], "layers": []}],
+        "warnings": [],
+    }
+    report.write_text(json.dumps(data), encoding="utf-8")
+
+    loaded = load_unity_inventory(report)
+    saved = AvatarEvolutionStore(tmp_path / "library").save_unity_inventory(loaded)
+
+    assert loaded["avatarName"] == "Chiyuri"
+    assert json.loads(saved.read_text(encoding="utf-8")) == data
+
+
+def test_load_unity_inventory_rejects_unknown_schema(tmp_path: Path):
+    from chiyuri_ai.avatar import load_unity_inventory
+
+    report = tmp_path / "bad.json"
+    report.write_text('{"schemaVersion": 99, "avatarName": "X"}', encoding="utf-8")
+    with pytest.raises(ValueError, match="верс"):
+        load_unity_inventory(report)
+
+
+def test_load_unity_inventory_rejects_malformed_animators(tmp_path: Path):
+    from chiyuri_ai.avatar import load_unity_inventory
+
+    report = tmp_path / "bad.json"
+    report.write_text(
+        '{"schemaVersion":1,"avatarName":"X","animators":[{"parameters":{}}]}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="parameters"):
+        load_unity_inventory(report)

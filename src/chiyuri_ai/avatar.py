@@ -145,6 +145,33 @@ class AvatarProjectScanner:
         )
 
 
+
+
+def load_unity_inventory(path: Path) -> dict[str, object]:
+    """Load and validate the bounded JSON report exported by the Unity inspector."""
+    source = path.expanduser().resolve(strict=True)
+    if not source.is_file() or source.stat().st_size > 10 * 1024 * 1024:
+        raise ValueError("Отчёт Unity должен быть файлом размером не более 10 МБ.")
+    try:
+        data = json.loads(source.read_text(encoding="utf-8-sig"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("Файл не является корректным JSON-отчётом Unity.") from exc
+    if not isinstance(data, dict) or data.get("schemaVersion") != 1:
+        raise ValueError("Неподдерживаемая версия формата отчёта Unity.")
+    if not isinstance(data.get("avatarName"), str) or not data["avatarName"].strip():
+        raise ValueError("В отчёте отсутствует имя аватара.")
+    for key in ("componentTypes", "toggleCandidates", "animators", "warnings"):
+        if not isinstance(data.get(key, []), list):
+            raise ValueError(f"Некорректное поле отчёта: {key}")
+    for animator in data.get("animators", []):
+        if not isinstance(animator, dict):
+            raise ValueError("Некорректная запись Animator.")
+        for key in ("parameters", "layers"):
+            if not isinstance(animator.get(key, []), list):
+                raise ValueError(f"Некорректное поле Animator: {key}")
+    return data
+
+
 class AvatarEvolutionStore:
     """Persists inventory snapshots and sourced upgrade candidates outside Git."""
 
@@ -154,6 +181,9 @@ class AvatarEvolutionStore:
 
     def save_inventory(self, inventory: AvatarInventory) -> Path:
         return self._write("inventory.json", inventory.to_dict())
+
+    def save_unity_inventory(self, inventory: dict[str, object]) -> Path:
+        return self._write("unity-inventory.json", inventory)
 
     def save_candidate(self, candidate: UpgradeCandidate) -> Path:
         return self._write(f"candidate-{candidate.candidate_id}.json", asdict(candidate))

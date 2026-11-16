@@ -20,7 +20,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from chiyuri_ai.avatar import AvatarProjectScanner
+from chiyuri_ai.avatar import (
+    AvatarEvolutionStore,
+    AvatarProjectScanner,
+    load_unity_inventory,
+)
 
 INSPECTOR_RELATIVE_PATH = Path("Assets/Editor/ChiyuriAI/ChiyuriAvatarInspector.cs")
 
@@ -155,12 +159,14 @@ class AvatarManagerDialog(QDialog):
         detect_editor = QPushButton("Найти установленный Unity")
         scan_button = QPushButton("Проверить файлы")
         install_button = QPushButton("Установить инспектор")
+        import_button = QPushButton("Импортировать отчёт из Unity")
         launch_button = QPushButton("Открыть проект в Unity")
         choose_project.clicked.connect(self.choose_project)
         choose_editor.clicked.connect(self.choose_editor)
         detect_editor.clicked.connect(self.detect_editors)
         scan_button.clicked.connect(self.scan_project)
         install_button.clicked.connect(self.install)
+        import_button.clicked.connect(self.import_unity_report)
         launch_button.clicked.connect(self.launch)
 
         project_row = QHBoxLayout()
@@ -179,6 +185,7 @@ class AvatarManagerDialog(QDialog):
         layout.addWidget(self.editor_label)
         layout.addLayout(editor_row)
         layout.addWidget(install_button)
+        layout.addWidget(import_button)
         layout.addWidget(self.report, 1)
         self.setStyleSheet(
             "QDialog { background:#100b0e; color:#f2e9ed; }"
@@ -271,10 +278,71 @@ class AvatarManagerDialog(QDialog):
         ]
         self.report.setPlainText("\n".join(lines))
         self.inventory_directory.mkdir(parents=True, exist_ok=True)
-        from chiyuri_ai.avatar import AvatarEvolutionStore
-
         saved = AvatarEvolutionStore(self.inventory_directory).save_inventory(inventory)
         self.report.append(f"\n\nОтчёт сохранён: {saved}")
+
+    def import_unity_report(self) -> None:
+        selected, _ = QFileDialog.getOpenFileName(
+            self, "Выбери JSON-отчёт из Unity", "", "Unity inventory (*.json)"
+        )
+        if not selected:
+            return
+        try:
+            inventory = load_unity_inventory(Path(selected))
+            saved = AvatarEvolutionStore(self.inventory_directory).save_unity_inventory(
+                inventory
+            )
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Не удалось импортировать отчёт", str(exc))
+            return
+
+        animators = inventory.get("animators", [])
+        components = inventory.get("componentTypes", [])
+        toggles = inventory.get("toggleCandidates", [])
+        warnings = inventory.get("warnings", [])
+        lines = [
+            "ОТЧЁТ ИЗ UNITY EDITOR",
+            f"Аватар: {inventory['avatarName']}",
+            f"Версия Unity: {inventory.get('unityVersion', 'не указана')}",
+            f"Компонентов: {len(components)}",
+            f"Animator: {len(animators)}",
+            f"Кандидатов переключателей: {len(toggles)}",
+            "",
+            "КОМПОНЕНТЫ:",
+            *(f" • {item}" for item in components[:150]),
+            "",
+            "ПЕРЕКЛЮЧАТЕЛИ:",
+            *(f" • {item}" for item in toggles[:150]),
+            "",
+            "ANIMATOR / СЛОИ / СОСТОЯНИЯ:",
+        ]
+        for animator in animators[:50]:
+            lines.append(
+                f" • {animator.get('hierarchyPath', '?')} — "
+                f"{animator.get('controllerName') or 'без контроллера'}"
+            )
+            for parameter in animator.get("parameters", [])[:100]:
+                lines.append(
+                    f"    Параметр: {parameter.get('name', '?')} "
+                    f"({parameter.get('type', '?')})"
+                )
+            for layer in animator.get("layers", [])[:50]:
+                lines.append(f"    Слой: {layer.get('name', '?')}")
+                for state in layer.get("states", [])[:100]:
+                    motion = state.get("motionName") or "без Motion"
+                    lines.append(
+                        f"      {state.get('fullPath', state.get('name', '?'))} → {motion}"
+                    )
+                    for transition in state.get("transitions", [])[:30]:
+                        conditions = ", ".join(transition.get("conditions", []))
+                        lines.append(
+                            f"        переход → {transition.get('destination', '?')} "
+                            f"[{conditions or 'без условий'}]"
+                        )
+        lines.extend(["", "ПРЕДУПРЕЖДЕНИЯ:"])
+        lines.extend(f" • {item}" for item in warnings[:100])
+        lines.extend(["", f"Отчёт сохранён: {saved}"])
+        self.report.setPlainText("\n".join(lines))
 
     def install(self) -> None:
         if self.project_root is None:
