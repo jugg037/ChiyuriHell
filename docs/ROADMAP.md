@@ -5,18 +5,18 @@
 - [x] Python package and desktop shell.
 - [x] SSD-aware private storage paths.
 - [x] Windows CI matrix.
-- [ ] Green lint and test jobs.
+- [x] Green lint and test jobs (first full core run verified below).
 
 ## Stage 1 — local application core
 - [x] SQLite conversation memory with FTS5 search.
 - [x] Capability-based model adapter contract and router.
 - [x] Conversation orchestration service.
 - [x] CPU/RAM and optional NVIDIA VRAM telemetry.
-- [ ] Settings UI and runtime health panel.
+- [x] Runtime health and hardware status panel (initial).\n- [ ] Settings UI.
 - [ ] Resource-aware queue and worker lifecycle.
 
 ## Stage 2 — model integrations
-- [ ] llama.cpp local chat adapter and model manager.
+- [x] llama.cpp local chat adapter (model manager remains pending).
 - [ ] Vision adapter and image understanding.
 - [ ] ComfyUI image workflow adapter.
 - [ ] ComfyUI video workflow adapter and cancellable queue.
@@ -34,3 +34,4 @@
 - [ ] Release asset and checksum verification.
 
 The roadmap marks only code already committed. A checked integration item does not imply that a real model backend is connected until its adapter and hardware tests are complete.
+\n\n## First usable prototype target\n\nThe initial desktop prototype includes a gothic Qt chat window, persistent SQLite conversation history, FTS5 search, a llama.cpp HTTP adapter, background inference/status workers, and best-effort CPU/RAM/NVIDIA VRAM telemetry. A model server and model weights must be installed separately. The CI pipeline creates a portable Windows x64 artifact after both quality jobs pass.\n
