@@ -67,3 +67,16 @@ isolation, filesystem ACLs or end-to-end security testing.
 
 ## Tool execution and audit
 Every callable capability must be registered with a name, description, input validator, permission scope and risk. The registry checks identity policy and permission policy before calling a handler. Unknown tools and invalid inputs are denied. Decisions and outcomes are recorded in an append-only SQLite audit log with secret-field redaction and bounded metadata. SQLite triggers prevent ordinary update/delete operations; this is not tamper-proof against a process with direct database/file access, so production deployment still needs OS ACLs and external integrity protection.
+
+
+## Outbound network boundary
+
+The application-level HTTPS reader uses an exact hostname allowlist, standard HTTPS port,
+public-address validation for every DNS answer, and a connection pinned to one of those
+validated IP addresses while TLS certificate verification retains the original hostname.
+Redirects are rejected. Sending user data through this client requires a separate approval
+flag. This protects this client path against DNS rebinding between validation and connect;
+it does not yet enforce process-wide egress. The SearXNG connector and explicitly enrolled
+LAN-device adapters remain separately configured paths. Windows Firewall enforcement and
+routing every network-capable adapter through one broker are still required for a complete
+deny-by-default boundary.
