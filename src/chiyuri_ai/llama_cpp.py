@@ -46,7 +46,11 @@ class LlamaCppServerAdapter:
             raise ValueError(f"Unsupported capability: {request.capability.value}")
         payload = {
             "model": self._model_id,
-            "messages": [{"role": "user", "content": request.prompt}],
+            "messages": (
+                ([{"role": "system", "content": request.system_prompt}]
+                 if request.system_prompt.strip() else [])
+                + [{"role": "user", "content": request.prompt}]
+            ),
             "temperature": float(request.options.get("temperature", 0.7)),
             "max_tokens": int(request.options.get("max_tokens", 1024)),
             "stream": False,
