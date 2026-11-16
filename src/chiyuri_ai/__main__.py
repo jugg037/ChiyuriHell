@@ -21,6 +21,7 @@ from chiyuri_ai import __version__
 from chiyuri_ai.llama_cpp import LlamaCppServerAdapter
 from chiyuri_ai.memory import ConversationMemory
 from chiyuri_ai.models import ModelRouter
+from chiyuri_ai.personality import PersonalityProfile, PersonalityStore
 from chiyuri_ai.resources import ResourceMonitor
 from chiyuri_ai.service import ConversationService
 from chiyuri_ai.storage import StoragePaths
@@ -81,7 +82,30 @@ class MainWindow(QMainWindow):
         self.router = ModelRouter()
         self.chat_adapter = LlamaCppServerAdapter()
         self.router.register(self.chat_adapter)
-        self.service = ConversationService(self.memory, self.router)
+        self.personality_store = PersonalityStore(paths.root / "Personas")
+        active_id = self.memory.get_setting("active_personality")
+        if not self.personality_store.list_profiles():
+            self.personality_store.save(
+                PersonalityProfile(
+                    profile_id="chiyuri",
+                    name="Чиюри",
+                    description="Любознательный, внимательный и самостоятельный ИИ-помощник.",
+                    traits={"общительность": 65, "юмор": 45, "инициативность": 70},
+                    speaking_style="Естественный русский язык, живое и ясное общение.",
+                    values=["Честность", "Полезность", "Уважение к пользователю"],
+                    boundaries=["Не выдумывать результаты действий и возможности инструментов"],
+                )
+            )
+        profiles = self.personality_store.list_profiles()
+        if active_id not in profiles:
+            active_id = profiles[0]
+            self.memory.set_setting("active_personality", active_id)
+        self.active_personality = self.personality_store.load(active_id)
+        self.service = ConversationService(
+            self.memory,
+            self.router,
+            system_prompt_provider=self.active_personality.to_prompt,
+        )
         self.conversation_id = self.service.new_conversation()
         self.worker: ChatWorker | None = None
         self.monitor = ResourceMonitor()
