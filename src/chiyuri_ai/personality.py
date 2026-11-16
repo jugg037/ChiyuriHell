@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import asdict, dataclass, field
 from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 
