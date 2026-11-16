@@ -1,4 +1,4 @@
-import pytest
+import socket\n\nimport pytest
 
 from chiyuri_ai.network_access import (
     DeviceRegistry,
@@ -71,3 +71,100 @@ def test_http_connector_restricts_device_paths_and_plain_http_hosts():
     public_http = registry.enroll("Remote", "http://example.com/api", "http", set())
     with pytest.raises(NetworkAccessDenied):
         connector._resource_url(public_http, "status")
+
+
+def test_egress_policy_uses_exact_hosts_and_pins_public_dns_results():
+    from chiyuri_ai.egress import NetworkEgressPolicy
+
+    calls = []
+
+    def resolver(host, port, *, type):
+        calls.append((host, port, type))
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
+
+    policy = NetworkEgressPolicy({"example.com"}, resolver=resolver)
+    endpoint = policy.authorize("https://example.com/article?q=1")
+
+    assert endpoint.host == "example.com"
+    assert endpoint.request_target == "/article?q=1"
+    assert endpoint.addresses == ("93.184.216.34",)
+    assert calls == [("example.com", 443, socket.SOCK_STREAM)]
+
+
+def test_egress_policy_rejects_private_or_mixed_dns_answers():
+    from chiyuri_ai.egress import EgressDenied, NetworkEgressPolicy
+
+    def resolver(_host, port, *, type):
+        return [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port)),
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", port)),
+        ]
+
+    policy = NetworkEgressPolicy({"example.com"}, resolver=resolver)
+    with pytest.raises(EgressDenied):
+        policy.authorize("https://example.com/")
+
+
+def test_egress_policy_requires_approval_for_user_data():
+    from chiyuri_ai.egress import EgressDenied, NetworkEgressPolicy
+
+    def resolver(_host, port, *, type):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
+
+    policy = NetworkEgressPolicy({"example.com"}, resolver=resolver)
+    with pytest.raises(EgressDenied):
+        policy.authorize("https://example.com/upload", contains_user_data=True)
+    assert policy.authorize(
+        "https://example.com/upload",
+        contains_user_data=True,
+        user_approved=True,
+    ).host == "example.com"
+
+
+def test_egress_policy_rejects_subdomains_non_https_and_nonstandard_ports():
+    from chiyuri_ai.egress import EgressDenied, NetworkEgressPolicy
+
+    policy = NetworkEgressPolicy({"example.com"})
+    for url in (
+        "https://sub.example.com/",
+        "http://example.com/",
+        "https://example.com:8443/",
+        "https://user@example.com/",
+    ):
+        with pytest.raises(EgressDenied):
+            policy.authorize(url)
+
+
+def test_pinned_https_connection_uses_validated_ip_and_original_tls_hostname(monkeypatch):
+    from chiyuri_ai.egress import _PinnedHTTPSConnection
+
+    calls = []
+
+    class FakeSocket:
+        def close(self):
+            pass
+
+    class FakeContext:
+        def wrap_socket(self, raw_socket, *, server_hostname):
+            calls.append(("tls", server_hostname))
+            return raw_socket
+
+    def fake_create_connection(address, *, timeout, source_address):
+        calls.append(("connect", address, timeout, source_address))
+        return FakeSocket()
+
+    monkeypatch.setattr("chiyuri_ai.egress.socket.create_connection", fake_create_connection)
+    connection = _PinnedHTTPSConnection(
+        "example.com",
+        443,
+        ("93.184.216.34",),
+        timeout=5,
+    )
+    connection._context = FakeContext()
+    connection.connect()
+
+    assert calls == [
+        ("connect", ("93.184.216.34", 443), 5, None),
+        ("tls", "example.com"),
+    ]
+    connection.close()

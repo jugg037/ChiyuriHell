@@ -11,7 +11,7 @@ from enum import StrEnum
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
-from uuid import uuid4
+from uuid import uuid4\n\nfrom chiyuri_ai.egress import EgressDenied, NetworkEgressPolicy
 
 
 class NetworkPermission(StrEnum):
@@ -82,13 +82,8 @@ class DeviceRegistry:
         return list(self._devices.values())
 
 
-class _NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
 class SafeInternetClient:
-    """Small bounded HTTP reader; only explicitly approved public hosts are reachable."""
+    """Bounded HTTPS reader using exact allowlists and DNS-pinned connections."""
 
     def __init__(
         self,
@@ -96,48 +91,95 @@ class SafeInternetClient:
         timeout_seconds: float = 12,
         max_bytes: int = 2_000_000,
     ) -> None:
-        self.approved_hosts = frozenset(host.lower().rstrip(".") for host in approved_hosts)
+        self.egress_policy = NetworkEgressPolicy(approved_hosts)
         self.timeout_seconds = timeout_seconds
         self.max_bytes = max_bytes
-        self._opener = build_opener(_NoRedirect)
 
-    @staticmethod
-    def _is_public_host(host: str) -> bool:
+    def get_text(
+        self,
+        url: str,
+        *,
+        contains_user_data: bool = False,
+        user_approved: bool = False,
+    ) -> str:
         try:
-            addresses = [ipaddress.ip_address(host)]
-        except ValueError:
-            try:
-                addresses = [
-                    ipaddress.ip_address(item[4][0])
-                    for item in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
-                ]
-            except OSError:
-                return False
-        return bool(addresses) and all(address.is_global for address in addresses)
+            endpoint = self.egress_policy.authorize(
+                url,
+                contains_user_data=contains_user_data,
+                user_approved=user_approved,
+            )
+        except EgressDenied as exc:
+            raise NetworkAccessDenied(str(exc)) from exc
 
-    def get_text(self, url: str) -> str:
-        from urllib.parse import urlsplit
-
-        parsed = urlsplit(url)
-        host = (parsed.hostname or "").lower().rstrip(".")
-        if parsed.scheme != "https" or host not in self.approved_hosts:
-            raise NetworkAccessDenied("Only approved HTTPS hosts are allowed")
-        if not self._is_public_host(host):
-            raise NetworkAccessDenied("Private, local and non-public network targets are blocked")
-        if parsed.username or parsed.password or parsed.port not in (None, 443):
-            raise NetworkAccessDenied("Credentials and non-standard ports are not allowed")
-        request = Request(url, headers={"User-Agent": "ChiyuriAI/0.1", "Accept": "text/*"})
+        connection = _PinnedHTTPSConnection(
+            endpoint.host,
+            endpoint.port,
+            endpoint.addresses,
+            timeout=self.timeout_seconds,
+        )
         try:
-            with self._opener.open(request, timeout=self.timeout_seconds) as response:
-                content_type = response.headers.get_content_type()
-                if not (content_type.startswith("text/") or content_type == "application/json"):
-                    raise ValueError(f"Unsupported response content type: {content_type}")
-                payload = response.read(self.max_bytes + 1)
-        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            connection.request(
+                "GET",
+                endpoint.request_target,
+                headers={"User-Agent": "ChiyuriAI/0.1", "Accept": "text/*"},
+            )
+            response = connection.getresponse()
+            if 300 <= response.status < 400:
+                raise NetworkAccessDenied("HTTP redirects are blocked")
+            if response.status >= 400:
+                raise RuntimeError(f"Internet request returned HTTP {response.status}")
+            content_type = response.getheader("Content-Type", "").split(";", 1)[0].lower()
+            if not (content_type.startswith("text/") or content_type == "application/json"):
+                raise ValueError(f"Unsupported response content type: {content_type}")
+            payload = response.read(self.max_bytes + 1)
+        except (OSError, TimeoutError, http.client.HTTPException) as exc:
             raise RuntimeError(f"Internet request failed: {exc}") from exc
+        finally:
+            connection.close()
+
         if len(payload) > self.max_bytes:
             raise ValueError("Internet response exceeded the configured size limit")
         return payload.decode("utf-8", errors="replace")
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """Connects to a previously validated IP while retaining TLS hostname checks."""
+
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        addresses: tuple[str, ...],
+        *,
+        timeout: float,
+    ) -> None:
+        super().__init__(host, port, timeout=timeout, context=ssl.create_default_context())
+        self._approved_addresses = addresses
+
+    def connect(self) -> None:
+        if self._tunnel_host:
+            raise OSError("HTTPS proxy tunnelling is not supported by the pinned client")
+        last_error: OSError | None = None
+        for address in self._approved_addresses:
+            raw_socket = None
+            try:
+                raw_socket = socket.create_connection(
+                    (address, self.port),
+                    timeout=self.timeout,
+                    source_address=self.source_address,
+                )
+                self.sock = self._context.wrap_socket(
+                    raw_socket,
+                    server_hostname=self.host,
+                )
+                return
+            except OSError as exc:
+                last_error = exc
+                if raw_socket is not None:
+                    raw_socket.close()
+        if last_error is not None:
+            raise last_error
+        raise OSError("No validated destination address is available")
 
 
 class DeviceConnector:

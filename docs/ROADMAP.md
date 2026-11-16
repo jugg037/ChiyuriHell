@@ -57,6 +57,6 @@ tests exist; it does not imply a Unity project has been supplied or tested.
 - [x] Add deterministic deny rules for self-replication, remote self-deployment, covert
       persistence, concealment and owner-binding changes.
 - [x] Require user initiation plus explicit approval before private identity-state export.
-- [ ] Enforce deny-by-default network egress with Windows Firewall integration.
+- [x] Add exact-host deny-by-default HTTPS egress policy with DNS-pinned public-IP connections and approval for user-data transfer.\n- [ ] Enforce process-wide deny-by-default network egress with Windows Firewall integration.
 - [ ] Isolate model process from executable, permission-policy and audit-store writes.
 - [ ] Add signed update verification, tamper-evident audit storage and security integration tests.
