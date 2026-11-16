@@ -16,7 +16,6 @@ from urllib.parse import urlsplit
 import chiyuri_ai.egress as egress
 from chiyuri_ai.models import Capability, GenerationRequest, GenerationResult
 
-
 _PROVIDER_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _ENV_NAME = re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$")
 _MAX_REQUEST_BYTES = 2_000_000
