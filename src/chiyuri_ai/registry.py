@@ -57,7 +57,10 @@ class ToolRegistry:
         self._tools: dict[str, ToolSpec] = {}
 
     def register(self, spec: ToolSpec) -> None:
-        valid_name = isinstance(spec.name, str) and spec.name.replace("_", "").replace(".", "").isalnum()
+        valid_name = (
+            isinstance(spec.name, str)
+            and spec.name.replace("_", "").replace(".", "").isalnum()
+        )
         if not valid_name:
             raise ValueError("Tool name must contain only letters, digits, dots or underscores")
         if spec.name in self._tools:
