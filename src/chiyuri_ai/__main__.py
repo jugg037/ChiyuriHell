@@ -27,6 +27,7 @@ from chiyuri_ai.personality import (
     PersonalityService,
     PersonalityStore,
 )
+from chiyuri_ai.research import InternetResearchService, SearxNGSearchProvider
 from chiyuri_ai.resources import ResourceMonitor
 from chiyuri_ai.service import ConversationService
 from chiyuri_ai.storage import StoragePaths
@@ -49,6 +50,40 @@ class ChatWorker(QThread):
             turn = self.service.send(self.conversation_id, self.message)
             self.completed.emit(turn.assistant_message, turn.model_id)
         except Exception as exc:  # noqa: BLE001 - surface backend failures in the chat
+            self.failed.emit(str(exc))
+
+
+class WebResearchWorker(QThread):
+    """Searches the web and grounds one chat response in labelled source results."""
+
+    completed = Signal(str, str, object)
+    failed = Signal(str)
+
+    def __init__(
+        self,
+        service: ConversationService,
+        conversation_id: str,
+        endpoint: str,
+        query: str,
+    ):
+        super().__init__()
+        self.service = service
+        self.conversation_id = conversation_id
+        self.endpoint = endpoint
+        self.query = query
+
+    def run(self) -> None:
+        try:
+            research = InternetResearchService(
+                [SearxNGSearchProvider(self.endpoint)]
+            )
+            results = research.search(self.query, limit=8)
+            context = research.to_context(results)
+            turn = self.service.send(
+                self.conversation_id, self.query, extra_context=context
+            )
+            self.completed.emit(turn.assistant_message, turn.model_id, results)
+        except Exception as exc:  # noqa: BLE001 - surface network and model errors
             self.failed.emit(str(exc))
 
 
@@ -140,6 +175,7 @@ class MainWindow(QMainWindow):
         self.conversation_id = self.service.new_conversation()
         self.worker: ChatWorker | None = None
         self.persona_worker: PersonaWorker | None = None
+        self.web_worker: WebResearchWorker | None = None
         self.monitor = ResourceMonitor()
         self.status_worker: StatusWorker | None = None
 
@@ -149,7 +185,7 @@ class MainWindow(QMainWindow):
 
         self.chat = QTextBrowser()
         self.chat.setObjectName("chat")
-        self.chat.setOpenExternalLinks(False)
+        self.chat.setOpenExternalLinks(True)
         self.chat.append(
             "<h2>Chiyuri AI</h2>"
             "<p>Локальный диалоговый интерфейс готов. "
@@ -160,11 +196,14 @@ class MainWindow(QMainWindow):
         self.input.returnPressed.connect(self.send_message)
         self.send_button = QPushButton("Отправить")
         self.persona_button = QPushButton("Настроить характер")
+        self.web_button = QPushButton("Поиск в интернете")
         self.persona_button.clicked.connect(self.create_personality)
+        self.web_button.clicked.connect(self.search_web)
         self.send_button.clicked.connect(self.send_message)
 
         input_row = QHBoxLayout()
         input_row.addWidget(self.input, 1)
+        input_row.addWidget(self.web_button)
         input_row.addWidget(self.persona_button)
         input_row.addWidget(self.send_button)
 
@@ -201,6 +240,73 @@ class MainWindow(QMainWindow):
         self.status_timer.timeout.connect(self.update_status)
         self.status_timer.start(5000)
         self.update_status()
+
+    def search_web(self) -> None:
+        if self.worker is not None and self.worker.isRunning():
+            self.statusBar().showMessage("Дождись завершения текущего ответа")
+            return
+        if self.web_worker is not None and self.web_worker.isRunning():
+            return
+        endpoint = self.memory.get_setting("searxng_endpoint")
+        if not endpoint:
+            endpoint, accepted = QInputDialog.getText(
+                self,
+                "Подключение поиска",
+                "Адрес твоего SearXNG (например, https://search.example):",
+            )
+            if not accepted or not endpoint.strip():
+                return
+            endpoint = endpoint.strip()
+            try:
+                SearxNGSearchProvider(endpoint)
+            except ValueError as exc:
+                self.statusBar().showMessage(str(exc), 10000)
+                return
+            self.memory.set_setting("searxng_endpoint", endpoint)
+        query, accepted = QInputDialog.getText(
+            self, "Поиск в интернете", "Что нужно найти?"
+        )
+        if not accepted or not query.strip():
+            return
+        self.chat.append(
+            f'<p style="color:#ff7898"><b>Ты · веб-поиск:</b> '
+            f"{html.escape(query)}</p>"
+        )
+        self.web_button.setEnabled(False)
+        self.send_button.setEnabled(False)
+        self.statusBar().showMessage("Ищу источники и готовлю ответ…")
+        self.web_worker = WebResearchWorker(
+            self.service, self.conversation_id, endpoint, query.strip()
+        )
+        self.web_worker.completed.connect(self.on_web_reply)
+        self.web_worker.failed.connect(self.on_web_error)
+        self.web_worker.finished.connect(self.on_web_finished)
+        self.web_worker.start()
+
+    def on_web_reply(self, answer: str, model_id: str, results: object) -> None:
+        self.on_reply(answer, model_id)
+        sources = results if isinstance(results, list) else []
+        if not sources:
+            self.chat.append("<p><i>Поиск не вернул источников.</i></p>")
+            return
+        lines = ["<p><b>Источники:</b></p><ol>"]
+        for item in sources:
+            title = html.escape(item.title)
+            url = html.escape(item.url, quote=True)
+            lines.append(f'<li><a href="{url}">{title}</a></li>')
+        lines.append("</ol>")
+        self.chat.append("".join(lines))
+
+    def on_web_error(self, error: str) -> None:
+        self.chat.append(
+            '<p style="color:#ff9b9b"><b>Ошибка веб-поиска:</b> '
+            f"{html.escape(error)}</p>"
+        )
+        self.statusBar().showMessage("Веб-поиск не выполнен", 10000)
+
+    def on_web_finished(self) -> None:
+        self.web_button.setEnabled(True)
+        self.send_button.setEnabled(True)
 
     def create_personality(self) -> None:
         if self.worker is not None and self.worker.isRunning():

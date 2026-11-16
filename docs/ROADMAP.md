@@ -28,7 +28,9 @@
 - [x] Explicit LAN device registry with separate read/control grants.
 - [x] Confirmation gate for device control operations.
 - [x] Bounded HTTPS reader with approved-host policy.
-- [ ] Search-provider integration and cited web research.
+- [x] SearXNG search-provider adapter with bounded JSON responses.
+- [x] Source-labelled search context injected into the assistant system message.
+- [x] Desktop web-search action with clickable source links.
 - [ ] Persona Studio UI, profile preview and active-profile selection.
 - [ ] Permission UI, encrypted credential storage and append-only audit log.
 - [ ] SSH / HTTP API / SMB / WebSocket device connectors.
