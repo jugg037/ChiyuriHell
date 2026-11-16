@@ -18,7 +18,7 @@ class StoragePaths:
     backups: Path
 
     @classmethod
-    def from_environment(cls) -> "StoragePaths":
+    def from_environment(cls) -> StoragePaths:
         """Resolve the data root, allowing users to place it on another SSD."""
         configured = os.environ.get("CHIYURI_HOME")
         root = Path(configured).expanduser() if configured else Path.home() / "ChiyuriAI"
