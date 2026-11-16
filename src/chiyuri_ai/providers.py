@@ -13,8 +13,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from chiyuri_ai import egress
 from chiyuri_ai.models import Capability, GenerationRequest, GenerationResult
+
+from chiyuri_ai import egress
 
 
 _PROVIDER_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
