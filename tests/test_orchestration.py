@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from chiyuri_ai.models import Capability, GenerationResult, NoModelAvailable
+from chiyuri_ai.models import Capability, GenerationResult, ModelRouter
 from chiyuri_ai.orchestration import ModelCoordinator, SpecialistTask
 
 
@@ -20,7 +20,7 @@ class FakeAdapter:
 
 
 def test_specialist_results_are_synthesized_by_central_chat_model():
-    router = __import__("chiyuri_ai.models", fromlist=["ModelRouter"]).ModelRouter()
+    router = ModelRouter()
     router.register(FakeAdapter("vision-1", frozenset({Capability.VISION}), "A red car"))
     router.register(FakeAdapter("central-1", frozenset({Capability.CHAT}), "I see a red car"))
     router.set_preferred("central-1")
