@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from http.client import HTTPException
-
 import ipaddress
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
+from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
