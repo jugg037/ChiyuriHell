@@ -30,7 +30,12 @@ class StoragePaths:
             backups=root / "Backups",
         )
 
+    @property
+    def avatars(self) -> Path:
+        """Private storage for the primary avatar, evolution catalogue and snapshots."""
+        return self.library / "Avatars"
+
     def create(self) -> None:
         """Create the directory layout when the application is first launched."""
-        for path in (self.root, self.models, self.library, self.cache, self.backups):
+        for path in (self.root, self.models, self.library, self.cache, self.backups, self.avatars):
             path.mkdir(parents=True, exist_ok=True)
