@@ -88,3 +88,45 @@ def test_invalid_plan_falls_back_to_a_normal_central_answer():
 
     assert result.assistant_message == "Normal answer"
     assert central.calls == 2
+
+
+
+def test_respond_automatically_uses_specialist_then_synthesizes():
+    class PlanningAdapter(FakeAdapter):
+        def __init__(self):
+            super().__init__("central-1", frozenset({Capability.CHAT}), "")
+            self.calls = 0
+
+        def generate(self, request):
+            self.calls += 1
+            if self.calls == 1:
+                return GenerationResult(
+                    self.model_id,
+                    '{"tasks":[{"task_id":"inspect","capability":"vision",'
+                    '"prompt":"Describe image","options":{}}],"answer":""}',
+                )
+            return GenerationResult(self.model_id, "Единый ответ Чиюри")
+
+    router = ModelRouter()
+    central = PlanningAdapter()
+    vision = FakeAdapter("vision-1", frozenset({Capability.VISION}), "A red car")
+    router.register(central)
+    router.register(vision)
+    router.set_preferred("central-1")
+
+    result = ModelCoordinator(router).respond("Что изображено?")
+
+    assert result.assistant_message == "Единый ответ Чиюри"
+    assert result.central_model_id == "central-1"
+    assert result.specialists[0].model_id == "vision-1"
+    assert central.calls == 2
+
+
+def test_respond_uses_direct_chat_when_no_specialists_exist():
+    router = ModelRouter()
+    central = FakeAdapter("central-1", frozenset({Capability.CHAT}), "Обычный ответ")
+    router.register(central)
+
+    result = ModelCoordinator(router).respond("Привет")
+
+    assert result.assistant_message == "Обычный ответ"

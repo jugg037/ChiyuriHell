@@ -72,6 +72,132 @@ class ModelCoordinator:
     def __init__(self, router: ModelRouter) -> None:
         self.router = router
 
+    def respond(
+        self,
+        user_request: str,
+        *,
+        system_prompt: str = "",
+        conversation_id: str | None = None,
+    ) -> CoordinationResult:
+        """Let the central model select from available specialist capabilities."""
+        if not isinstance(user_request, str) or not user_request.strip():
+            raise ValueError("User request is required")
+        available = {
+            capability.value: self.router.available_models(capability)
+            for capability in Capability
+            if capability is not Capability.CHAT
+        }
+        available = {name: models for name, models in available.items() if models}
+        if not available:
+            return self.execute(
+                user_request,
+                system_prompt=system_prompt,
+                conversation_id=conversation_id,
+            )
+
+        planning_prompt = (
+            "Запрос пользователя:\\n"
+            + user_request
+            + "\\n\\nДоступные специализированные возможности и модели:\\n"
+            + json.dumps(available, ensure_ascii=False)
+            + "\\n\\nВерни только JSON. Если помощники не нужны: "
+            + '{"tasks": [], "answer": "готовый ответ пользователю"}. '
+            + "Если нужны: "
+            + '{"tasks": [{"task_id": "unique_id", "capability": "vision", '
+            + '"prompt": "конкретное задание", "options": {}}], "answer": ""}. '
+            + "Используй только доступные capability. Максимум четыре задачи. "
+            + "Не создавай команды для Windows или аватара: выбирай только ИИ-помощников."
+        )
+        plan = self.router.generate(
+            GenerationRequest(
+                capability=Capability.CHAT,
+                prompt=planning_prompt,
+                conversation_id=conversation_id,
+                system_prompt=(
+                    system_prompt
+                    + "\\n\\nТы — центральный координатор Чиюри. Сейчас верни "
+                    + "только JSON-план, не показывай план пользователю."
+                ),
+            )
+        )
+        tasks = self._parse_tasks(plan.output, set(available))
+        if tasks is None:
+            return self.execute(
+                user_request,
+                system_prompt=system_prompt,
+                conversation_id=conversation_id,
+            )
+        if not tasks:
+            answer = self._parse_answer(plan.output)
+            if answer:
+                return CoordinationResult(answer, plan.model_id)
+            return self.execute(
+                user_request,
+                system_prompt=system_prompt,
+                conversation_id=conversation_id,
+            )
+        return self.execute(
+            user_request,
+            system_prompt=system_prompt,
+            conversation_id=conversation_id,
+            tasks=tasks,
+        )
+
+    @staticmethod
+    def _parse_tasks(
+        raw: str, available_capabilities: set[str]
+    ) -> list[SpecialistTask] | None:
+        try:
+            data = ModelCoordinator._parse_json(raw)
+            if not isinstance(data, dict) or not isinstance(data.get("tasks"), list):
+                return None
+            if len(data["tasks"]) > _MAX_SPECIALIST_TASKS:
+                return None
+            tasks = []
+            for item in data["tasks"]:
+                if not isinstance(item, dict):
+                    return None
+                capability_name = item.get("capability")
+                if (
+                    not isinstance(capability_name, str)
+                    or capability_name not in available_capabilities
+                ):
+                    return None
+                tasks.append(
+                    SpecialistTask(
+                        task_id=item.get("task_id"),
+                        capability=Capability(capability_name),
+                        prompt=item.get("prompt"),
+                        options=item.get("options", {}),
+                    )
+                )
+            if len({task.task_id for task in tasks}) != len(tasks):
+                return None
+            return tasks
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _parse_answer(raw: str) -> str:
+        try:
+            data = ModelCoordinator._parse_json(raw)
+        except (TypeError, ValueError):
+            return ""
+        answer = data.get("answer") if isinstance(data, dict) else ""
+        return answer.strip() if isinstance(answer, str) else ""
+
+    @staticmethod
+    def _parse_json(raw: str) -> object:
+        text = raw.strip()
+        fence = chr(96) * 3
+        if text.startswith(fence):
+            text = re.sub(
+                r"^" + re.escape(fence) + r"(?:json)?\s*|\s*" + re.escape(fence) + r"$",
+                "",
+                text,
+            )
+        return json.loads(text)
+
     def execute(
         self,
         user_request: str,
