@@ -9,10 +9,10 @@ from PySide6.QtCore import QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
+    QInputDialog,
     QLineEdit,
     QMainWindow,
     QPushButton,
-    QInputDialog,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
