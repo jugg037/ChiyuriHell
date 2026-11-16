@@ -5,14 +5,18 @@
 - [x] Python package and desktop shell.
 - [x] SSD-aware private storage paths.
 - [x] Windows CI matrix.
-- [x] Green lint and test jobs (first full core run verified below).
+- [x] Green lint and test jobs.
+- [x] Portable Windows x64 artifact.
+- [x] Windows installer artifact with Start Menu and optional desktop shortcuts.
+- [ ] Fresh-machine installation test.
+- [ ] Release asset and checksum verification.
 
 ## Stage 1 — local application core
 - [x] SQLite conversation memory with FTS5 search.
 - [x] Capability-based model adapter contract and router.
 - [x] Conversation orchestration service.
 - [x] CPU/RAM and optional NVIDIA VRAM telemetry.
-- [x] Runtime health and hardware status panel (initial).\n- [ ] Settings UI.
+- [ ] Settings UI.
 - [ ] Resource-aware queue and worker lifecycle.
 
 ## Stage 2 — model integrations
@@ -24,24 +28,25 @@
 
 ## Stage 3 — unified personality and connected assistant
 - [x] Structured personality profiles and local JSON storage.
-- [x] Russian-prompt-to-profile service contract (model callback + JSON validation).
+- [x] Russian-prompt-to-profile service contract.
 - [x] Explicit LAN device registry with separate read/control grants.
 - [x] Confirmation gate for device control operations.
 - [x] Bounded HTTPS reader with approved-host policy.
-- [x] SearXNG search-provider adapter with bounded JSON responses.
-- [x] Source-labelled search context injected into the assistant system message.
-- [x] Desktop web-search action with clickable source links.
-- [ ] Persona Studio UI, profile preview and active-profile selection.
+- [x] SearXNG search-provider adapter.
+- [ ] Persona Studio UI and cross-modal persona injection.
 - [ ] Permission UI, encrypted credential storage and append-only audit log.
 - [ ] SSH / HTTP API / SMB / WebSocket device connectors.
-- [ ] Permission-aware Windows UI Automation and visible action confirmations.
-- [ ] Inject one active persona consistently into chat, voice, vision and media tasks.
+- [ ] Permission-aware Windows UI Automation.
 
-## Stage 4 — packaging and first usable build
-- [ ] Windows x64 portable build.
-- [ ] Installer and update channel.
-- [ ] Fresh-machine installation test.
-- [ ] Release asset and checksum verification.
+## Stage 4 — avatar body and evolution
+- [x] Read-only avatar project inventory and basic Animator parameter extraction.
+- [x] Local upgrade-candidate records with HTTPS source and licence requirements.
+- [ ] Unity-side inspector for Animator layers, states, transitions and expression menus.
+- [ ] Semantic animation/prop/toggle capability catalogue.
+- [ ] Isolated animation discovery and validation scene.
+- [ ] Unity runtime bridge for expressions, props, motion and desktop interaction.
+- [ ] Upgrade staging, preview, approval, versioning and rollback.
+- [ ] Automated research and compatibility scoring for candidate assets.
 
-The roadmap marks only code already committed. A checked integration item does not imply that a real model backend is connected until its adapter and hardware tests are complete.
-\n\n## First usable prototype target\n\nThe initial desktop prototype includes a gothic Qt chat window, persistent SQLite conversation history, FTS5 search, a llama.cpp HTTP adapter, background inference/status workers, and best-effort CPU/RAM/NVIDIA VRAM telemetry. A model server and model weights must be installed separately. The CI pipeline creates a portable Windows x64 artifact after both quality jobs pass.\n
+The roadmap marks only code already committed. A checked item means its code and automated
+tests exist; it does not imply a Unity project has been supplied or tested.
