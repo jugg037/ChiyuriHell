@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from chiyuri_ai import __version__
+from chiyuri_ai.avatar_manager import AvatarManagerDialog
 from chiyuri_ai.llama_cpp import LlamaCppServerAdapter
 from chiyuri_ai.memory import ConversationMemory
 from chiyuri_ai.model_library_ui import ModelLibraryDialog

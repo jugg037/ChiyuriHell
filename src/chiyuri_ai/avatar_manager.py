@@ -1,7 +1,6 @@
 """Desktop manager for inspecting a Unity avatar project with Chiyuri."""
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 from importlib.resources import files
