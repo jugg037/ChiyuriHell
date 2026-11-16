@@ -20,10 +20,13 @@
 - [ ] Resource-aware queue and worker lifecycle.
 
 ## Stage 2 — model integrations
-- [x] llama.cpp local chat adapter (model manager remains pending).
+- [x] llama.cpp local chat adapter.
 - [x] Generic OpenAI-compatible HTTPS chat adapter.
 - [x] Private provider configuration store (API-key values are not persisted).
-- [x] Provider Manager UI for adding, editing, enabling, disabling and removing providers.
+- [x] Provider Manager UI for cloud endpoints.
+- [x] Hugging Face public model catalog with huihui-ai-first search.
+- [x] Confirmed GGUF model download into private Models storage.
+- [ ] In-app llama.cpp server lifecycle manager for downloaded models.
 - [ ] Provider connection test and live health status.
 - [ ] Vision adapter and image understanding.
 - [ ] ComfyUI image workflow adapter.
@@ -46,7 +49,6 @@
 
 ## Stage 4 — avatar body and evolution
 - [x] Read-only avatar project inventory and basic Animator parameter extraction.
-- [x] Local upgrade-candidate records with HTTPS source and licence requirements.
 - [ ] Unity-side inspector for Animator layers, states, transitions and expression menus.
 - [ ] Semantic animation/prop/toggle capability catalogue.
 - [ ] Isolated animation discovery and validation scene.

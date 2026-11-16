@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from chiyuri_ai import __version__
 from chiyuri_ai.llama_cpp import LlamaCppServerAdapter
 from chiyuri_ai.memory import ConversationMemory
+from chiyuri_ai.model_library_ui import ModelLibraryDialog
 from chiyuri_ai.models import Capability, GenerationRequest, ModelRouter
 from chiyuri_ai.personality import (
     PersonalityProfile,
@@ -209,9 +210,11 @@ class MainWindow(QMainWindow):
         self.persona_button = QPushButton("Настроить характер")
         self.web_button = QPushButton("Поиск в интернете")
         self.provider_button = QPushButton("ИИ-провайдеры")
+        self.model_library_button = QPushButton("Библиотека моделей")
         self.persona_button.clicked.connect(self.create_personality)
         self.web_button.clicked.connect(self.search_web)
         self.provider_button.clicked.connect(self.manage_providers)
+        self.model_library_button.clicked.connect(self.open_model_library)
         self.send_button.clicked.connect(self.send_message)
 
         input_row = QHBoxLayout()
@@ -219,6 +222,7 @@ class MainWindow(QMainWindow):
         input_row.addWidget(self.web_button)
         input_row.addWidget(self.persona_button)
         input_row.addWidget(self.provider_button)
+        input_row.addWidget(self.model_library_button)
         input_row.addWidget(self.send_button)
 
         layout = QVBoxLayout()
@@ -263,6 +267,10 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(
                     f"Провайдер «{config.name}» пропущен: {exc}", 10000
                 )
+
+    def open_model_library(self) -> None:
+        dialog = ModelLibraryDialog(self.paths.models, self)
+        dialog.exec()
 
     def manage_providers(self) -> None:
         dialog = ProviderManagerDialog(
