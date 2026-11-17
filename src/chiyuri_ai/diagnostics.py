@@ -26,7 +26,7 @@ _SECRET_PATTERNS = (
     re.compile(r"(?i)(gh[pousr]_[A-Za-z0-9_]{12,})"),
     re.compile(r"(?i)(sk-[A-Za-z0-9_-]{12,})"),
     re.compile(
-        r"(?i)(api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|secret|authorization)"
+        r"(?i)(api[_-]?(?:key|token)|access[_-]?token|refresh[_-]?token|token|password|passwd|secret|authorization)"
         r"(\s*[=:]\s*)([\"']?)[^\s,;\"']+"
     ),
     re.compile(r"(?i)([?&](?:token|key|password|secret)=)[^&\s]+"),
@@ -69,6 +69,12 @@ class DiagnosticCenter:
         self.logger = logging.getLogger("chiyuri_ai")
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
+        for existing in list(self.logger.handlers):
+            if getattr(existing, "_chiyuri_diagnostics", False):
+                existing_path = Path(existing.baseFilename).resolve()
+                if existing_path != self.log_path.resolve():
+                    self.logger.removeHandler(existing)
+                    existing.close()
         has_handler = any(
             getattr(handler, "_chiyuri_diagnostics", False)
             for handler in self.logger.handlers
