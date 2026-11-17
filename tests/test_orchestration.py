@@ -130,3 +130,25 @@ def test_respond_uses_direct_chat_when_no_specialists_exist():
     result = ModelCoordinator(router).respond("Привет")
 
     assert result.assistant_message == "Обычный ответ"
+
+
+
+def test_planning_prompt_uses_real_line_breaks():
+    class CapturingAdapter(FakeAdapter):
+        def __init__(self):
+            super().__init__("central-1", frozenset({Capability.CHAT}), "not json")
+            self.prompts = []
+
+        def generate(self, request):
+            self.prompts.append(request.prompt)
+            return GenerationResult(self.model_id, "normal answer")
+
+    router = ModelRouter()
+    central = CapturingAdapter()
+    router.register(central)
+    router.register(FakeAdapter("vision-1", frozenset({Capability.VISION}), "image"))
+    ModelCoordinator(router).respond("Inspect this image")
+
+    assert central.prompts
+    assert "\\n" not in central.prompts[0]
+    assert "Запрос пользователя:\nInspect this image" in central.prompts[0]

@@ -80,7 +80,31 @@ def test_load_unity_inventory_validates_and_persists_report(tmp_path: Path):
         "unityVersion": "2022.3",
         "componentTypes": ["Animator"],
         "toggleCandidates": ["Hat_Toggle"],
-        "animators": [{"hierarchyPath": "Chiyuri", "parameters": [], "layers": []}],
+        "gameObjects": [
+            {
+                "hierarchyPath": "Chiyuri/Body",
+                "activeSelf": True,
+                "activeInHierarchy": True,
+                "componentTypes": ["SkinnedMeshRenderer"],
+            }
+        ],
+        "sdkDescriptors": [
+            {
+                "hierarchyPath": "Chiyuri",
+                "expressionParametersAsset": "ChiyuriParameters",
+                "expressionsMenuAsset": "ChiyuriMenu",
+            }
+        ],
+        "animators": [
+            {
+                "hierarchyPath": "Chiyuri",
+                "parameters": [],
+                "layers": [],
+                "overrides": [
+                    {"originalClipName": "Idle", "overrideClipName": "ChiyuriIdle"}
+                ],
+            }
+        ],
         "warnings": [],
     }
     report.write_text(json.dumps(data), encoding="utf-8")
@@ -111,3 +135,64 @@ def test_load_unity_inventory_rejects_malformed_animators(tmp_path: Path):
     )
     with pytest.raises(ValueError, match="parameters"):
         load_unity_inventory(report)
+
+
+
+def test_load_unity_inventory_rejects_malformed_nested_state_data(tmp_path: Path):
+    import json
+
+    from chiyuri_ai.avatar import load_unity_inventory
+
+    report = tmp_path / "bad-nested.json"
+    report.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "avatarName": "Chiyuri",
+                "animators": [
+                    {
+                        "parameters": [],
+                        "layers": [
+                            {"name": "Base", "states": [{"name": "Idle", "transitions": "invalid"}]}
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="переходов"):
+        load_unity_inventory(report)
+
+
+def test_load_unity_inventory_validates_hierarchy_and_sdk_records(tmp_path: Path):
+    import json
+
+    from chiyuri_ai.avatar import load_unity_inventory
+
+    report = tmp_path / "avatar.json"
+    data = {
+        "schemaVersion": 1,
+        "avatarName": "Chiyuri",
+        "gameObjects": [
+            {
+                "hierarchyPath": "Chiyuri/Body",
+                "activeSelf": True,
+                "activeInHierarchy": True,
+                "componentTypes": ["Transform", "SkinnedMeshRenderer"],
+            }
+        ],
+        "sdkDescriptors": [
+            {
+                "hierarchyPath": "Chiyuri",
+                "expressionParametersAsset": "Parameters",
+                "expressionsMenuAsset": "Menu",
+            }
+        ],
+    }
+    report.write_text(json.dumps(data), encoding="utf-8")
+
+    loaded = load_unity_inventory(report)
+
+    assert loaded["gameObjects"][0]["activeInHierarchy"] is True
+    assert loaded["sdkDescriptors"][0]["expressionsMenuAsset"] == "Menu"

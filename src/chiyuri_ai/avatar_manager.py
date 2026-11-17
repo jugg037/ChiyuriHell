@@ -1,6 +1,7 @@
 """Desktop manager for inspecting a Unity avatar project with Chiyuri."""
 from __future__ import annotations
 
+import logging
 import os
 import re
 import shutil
@@ -133,6 +134,7 @@ class AvatarScanWorker(QThread):
         try:
             self.completed.emit(AvatarProjectScanner().scan(self.project_root))
         except Exception as exc:  # noqa: BLE001 - report scan errors in the UI
+            logging.getLogger(__name__).exception("Unity project scan failed")
             self.failed.emit(str(exc))
 
 
@@ -300,6 +302,8 @@ class AvatarManagerDialog(QDialog):
         components = inventory.get("componentTypes", [])
         toggles = inventory.get("toggleCandidates", [])
         warnings = inventory.get("warnings", [])
+        game_objects = inventory.get("gameObjects", [])
+        sdk_descriptors = inventory.get("sdkDescriptors", [])
         lines = [
             "ОТЧЁТ ИЗ UNITY EDITOR",
             f"Аватар: {inventory['avatarName']}",
@@ -308,8 +312,24 @@ class AvatarManagerDialog(QDialog):
             f"Animator: {len(animators)}",
             f"Кандидатов переключателей: {len(toggles)}",
             "",
+            "ОБЪЕКТЫ ИЕРАРХИИ:",
+            *(
+                f" • {item.get('hierarchyPath', '?')} — "
+                f"{'активен' if item.get('activeInHierarchy') else 'выключен'} "
+                f"({', '.join(item.get('componentTypes', [])[:8])})"
+                for item in game_objects[:250]
+            ),
+            "",
             "КОМПОНЕНТЫ:",
             *(f" • {item}" for item in components[:150]),
+            "",
+            "SDK / EXPRESSION ASSETS:",
+            *(
+                f" • {item.get('hierarchyPath', '?')}: "
+                f"parameters={item.get('expressionParametersAsset') or 'не найдено'}, "
+                f"menu={item.get('expressionsMenuAsset') or 'не найдено'}"
+                for item in sdk_descriptors[:50]
+            ),
             "",
             "ПЕРЕКЛЮЧАТЕЛИ:",
             *(f" • {item}" for item in toggles[:150]),
@@ -325,6 +345,11 @@ class AvatarManagerDialog(QDialog):
                 lines.append(
                     f"    Параметр: {parameter.get('name', '?')} "
                     f"({parameter.get('type', '?')})"
+                )
+            for override in animator.get("overrides", [])[:100]:
+                lines.append(
+                    f"    Override: {override.get('originalClipName', '?')} → "
+                    f"{override.get('overrideClipName') or 'исходный клип'}"
                 )
             for layer in animator.get("layers", [])[:50]:
                 lines.append(f"    Слой: {layer.get('name', '?')}")

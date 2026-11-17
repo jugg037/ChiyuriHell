@@ -96,11 +96,11 @@ class ModelCoordinator:
             )
 
         planning_prompt = (
-            "Запрос пользователя:\\n"
+            "Запрос пользователя:\n"
             + user_request
-            + "\\n\\nДоступные специализированные возможности и модели:\\n"
+            + "\n\nДоступные специализированные возможности и модели:\n"
             + json.dumps(available, ensure_ascii=False)
-            + "\\n\\nВерни только JSON. Если помощники не нужны: "
+            + "\n\nВерни только JSON. Если помощники не нужны: "
             + '{"tasks": [], "answer": "готовый ответ пользователю"}. '
             + "Если нужны: "
             + '{"tasks": [{"task_id": "unique_id", "capability": "vision", '
@@ -115,7 +115,7 @@ class ModelCoordinator:
                 conversation_id=conversation_id,
                 system_prompt=(
                     system_prompt
-                    + "\\n\\nТы — центральный координатор Чиюри. Сейчас верни "
+                    + "\n\nТы — центральный координатор Чиюри. Сейчас верни "
                     + "только JSON-план, не показывай план пользователю."
                 ),
             )

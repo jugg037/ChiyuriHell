@@ -77,3 +77,33 @@ def test_router_rejects_unknown_preferred_model():
     router = ModelRouter()
     with pytest.raises(ValueError, match="Unknown model"):
         router.set_preferred("missing")
+
+
+
+def test_router_survives_adapter_availability_errors():
+    class BrokenAvailability(FakeAdapter):
+        def is_available(self):
+            raise RuntimeError("credential=private-value")
+
+    router = ModelRouter()
+    router.register(BrokenAvailability("broken", "unused"))
+
+    assert router.available_models(Capability.CHAT) == []
+    with pytest.raises(NoModelAvailable) as error:
+        router.generate(GenerationRequest(Capability.CHAT, "hello"))
+    assert "private-value" not in str(error.value)
+
+
+def test_router_does_not_return_provider_exception_secrets():
+    class BrokenGeneration(FakeAdapter):
+        def generate(self, request):
+            raise RuntimeError("api_token=private-token-value")
+
+    router = ModelRouter()
+    router.register(BrokenGeneration("broken", "unused"))
+
+    with pytest.raises(NoModelAvailable) as error:
+        router.generate(GenerationRequest(Capability.CHAT, "hello"))
+
+    assert "private-token-value" not in str(error.value)
+    assert "RuntimeError" in str(error.value)

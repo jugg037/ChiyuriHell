@@ -19,8 +19,34 @@ namespace ChiyuriAI.EditorTools
         public string generatedUtc;
         public List<string> componentTypes = new List<string>();
         public List<string> toggleCandidates = new List<string>();
+        public List<ChiyuriGameObjectInfo> gameObjects = new List<ChiyuriGameObjectInfo>();
+        public List<ChiyuriSdkDescriptor> sdkDescriptors = new List<ChiyuriSdkDescriptor>();
         public List<ChiyuriAnimatorInventory> animators = new List<ChiyuriAnimatorInventory>();
         public List<string> warnings = new List<string>();
+    }
+
+    [Serializable]
+    public sealed class ChiyuriGameObjectInfo
+    {
+        public string hierarchyPath;
+        public bool activeSelf;
+        public bool activeInHierarchy;
+        public List<string> componentTypes = new List<string>();
+    }
+
+    [Serializable]
+    public sealed class ChiyuriSdkDescriptor
+    {
+        public string hierarchyPath;
+        public string expressionParametersAsset;
+        public string expressionsMenuAsset;
+    }
+
+    [Serializable]
+    public sealed class ChiyuriAnimatorOverride
+    {
+        public string originalClipName;
+        public string overrideClipName;
     }
 
     [Serializable]
@@ -30,6 +56,7 @@ namespace ChiyuriAI.EditorTools
         public string controllerName;
         public List<ChiyuriAnimatorParameter> parameters = new List<ChiyuriAnimatorParameter>();
         public List<ChiyuriAnimatorLayer> layers = new List<ChiyuriAnimatorLayer>();
+        public List<ChiyuriAnimatorOverride> overrides = new List<ChiyuriAnimatorOverride>();
     }
 
     [Serializable]
@@ -142,6 +169,44 @@ namespace ChiyuriAI.EditorTools
             inventory.unityVersion = Application.unityVersion;
             inventory.generatedUtc = DateTime.UtcNow.ToString("o");
 
+            Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform item = transforms[i];
+                if (item == null)
+                    continue;
+
+                GameObject gameObject = item.gameObject;
+                ChiyuriGameObjectInfo objectInfo = new ChiyuriGameObjectInfo();
+                objectInfo.hierarchyPath = GetHierarchyPath(root.transform, item);
+                objectInfo.activeSelf = gameObject.activeSelf;
+                objectInfo.activeInHierarchy = gameObject.activeInHierarchy;
+
+                Component[] objectComponents = gameObject.GetComponents<Component>();
+                for (int j = 0; j < objectComponents.Length; j++)
+                {
+                    Component objectComponent = objectComponents[j];
+                    if (objectComponent == null)
+                    {
+                        inventory.warnings.Add(
+                            "A missing-script component was found at " + objectInfo.hierarchyPath
+                        );
+                        continue;
+                    }
+                    string objectType = objectComponent.GetType().FullName;
+                    if (!string.IsNullOrEmpty(objectType))
+                        objectInfo.componentTypes.Add(objectType);
+                }
+                inventory.gameObjects.Add(objectInfo);
+
+                if (ToggleName.IsMatch(gameObject.name))
+                {
+                    string candidate = objectInfo.hierarchyPath + " (GameObject)";
+                    if (!inventory.toggleCandidates.Contains(candidate))
+                        inventory.toggleCandidates.Add(candidate);
+                }
+            }
+
             Component[] components = root.GetComponentsInChildren<Component>(true);
             HashSet<string> componentTypes = new HashSet<string>();
             for (int i = 0; i < components.Length; i++)
@@ -156,6 +221,34 @@ namespace ChiyuriAI.EditorTools
                 string typeName = component.GetType().FullName;
                 if (!string.IsNullOrEmpty(typeName))
                     componentTypes.Add(typeName);
+
+                if (typeName == "VRC.SDK3.Avatars.Components.VRCAvatarDescriptor")
+                {
+                    try
+                    {
+                        SerializedObject serialized = new SerializedObject(component);
+                        ChiyuriSdkDescriptor descriptor = new ChiyuriSdkDescriptor();
+                        descriptor.hierarchyPath = GetHierarchyPath(
+                            root.transform,
+                            component.transform
+                        );
+                        descriptor.expressionParametersAsset = GetObjectReferenceName(
+                            serialized,
+                            "expressionParameters"
+                        );
+                        descriptor.expressionsMenuAsset = GetObjectReferenceName(
+                            serialized,
+                            "expressionsMenu"
+                        );
+                        inventory.sdkDescriptors.Add(descriptor);
+                    }
+                    catch (Exception exception)
+                    {
+                        inventory.warnings.Add(
+                            "Could not inspect VRChat descriptor: " + exception.GetType().Name
+                        );
+                    }
+                }
             }
 
             inventory.componentTypes.AddRange(componentTypes);
@@ -188,7 +281,23 @@ namespace ChiyuriAI.EditorTools
             RuntimeAnimatorController runtimeController = animator.runtimeAnimatorController;
             while (runtimeController is AnimatorOverrideController)
             {
-                runtimeController = ((AnimatorOverrideController)runtimeController).runtimeAnimatorController;
+                AnimatorOverrideController overrideController =
+                    (AnimatorOverrideController)runtimeController;
+                List<KeyValuePair<AnimationClip, AnimationClip>> overrides =
+                    new List<KeyValuePair<AnimationClip, AnimationClip>>();
+                overrideController.GetOverrides(overrides);
+                for (int i = 0; i < overrides.Count; i++)
+                {
+                    ChiyuriAnimatorOverride overrideInfo = new ChiyuriAnimatorOverride();
+                    overrideInfo.originalClipName = overrides[i].Key != null
+                        ? overrides[i].Key.name
+                        : "(missing original clip)";
+                    overrideInfo.overrideClipName = overrides[i].Value != null
+                        ? overrides[i].Value.name
+                        : "";
+                    result.overrides.Add(overrideInfo);
+                }
+                runtimeController = overrideController.runtimeAnimatorController;
             }
 
             if (runtimeController == null)
@@ -335,6 +444,20 @@ namespace ChiyuriAI.EditorTools
                 if (child.motion != null)
                     CollectBlendChildren(child.motion, output, visited);
             }
+        }
+
+        private static string GetObjectReferenceName(
+            SerializedObject serialized,
+            string propertyName
+        )
+        {
+            SerializedProperty property = serialized.FindProperty(propertyName);
+            if (property == null || property.objectReferenceValue == null)
+                return "";
+            return property.objectReferenceValue.name
+                + " ("
+                + property.objectReferenceValue.GetType().FullName
+                + ")";
         }
 
         private static string GetHierarchyPath(Transform root, Transform target)

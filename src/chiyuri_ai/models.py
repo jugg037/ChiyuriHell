@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Capability(StrEnum):
@@ -73,18 +77,31 @@ class ModelRouter:
             raise ValueError(f"Unknown model: {model_id}")
         self._preferred_model_id = model_id
 
+    @staticmethod
+    def _is_available(adapter: ModelAdapter) -> bool:
+        try:
+            return adapter.is_available()
+        except Exception as exc:  # noqa: BLE001 - one broken adapter must not break routing
+            LOGGER.warning(
+                "Availability check failed for model %s (%s)",
+                adapter.model_id,
+                type(exc).__name__,
+                exc_info=True,
+            )
+            return False
+
     def available_models(self, capability: Capability | None = None) -> list[str]:
         return [
             adapter.model_id
             for adapter in self._adapters
-            if adapter.is_available()
+            if self._is_available(adapter)
             and (capability is None or capability in adapter.capabilities)
         ]
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
         compatible = [
             adapter for adapter in self._adapters
-            if request.capability in adapter.capabilities and adapter.is_available()
+            if request.capability in adapter.capabilities and self._is_available(adapter)
         ]
         if self._preferred_model_id is not None:
             compatible.sort(key=lambda item: item.model_id != self._preferred_model_id)
@@ -93,7 +110,13 @@ class ModelRouter:
             try:
                 return adapter.generate(request)
             except Exception as exc:  # noqa: BLE001 - fall back to another configured provider
-                failures.append(f"{adapter.model_id}: {exc}")
+                LOGGER.warning(
+                    "Model adapter %s failed (%s)",
+                    adapter.model_id,
+                    type(exc).__name__,
+                    exc_info=True,
+                )
+                failures.append(f"{adapter.model_id}: {type(exc).__name__}")
         detail = "; ".join(failures) if failures else "no compatible provider is configured"
         raise NoModelAvailable(
             f"No healthy model for capability '{request.capability.value}': {detail}"

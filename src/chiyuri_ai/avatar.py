@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 from dataclasses import asdict, dataclass, field
@@ -147,8 +148,137 @@ class AvatarProjectScanner:
 
 
 
+def _validate_string_list(value: object, label: str, *, limit: int = 5000) -> None:
+    if not isinstance(value, list) or len(value) > limit:
+        raise ValueError(f"Некорректный список в отчёте: {label}")
+    if any(not isinstance(item, str) or len(item) > 2048 for item in value):
+        raise ValueError(f"Некорректные текстовые элементы в отчёте: {label}")
+
+
+def _validate_optional_text(record: dict[str, object], key: str, label: str) -> None:
+    value = record.get(key)
+    if value is not None and (not isinstance(value, str) or len(value) > 2048):
+        raise ValueError(f"Некорректное текстовое поле: {label}.{key}")
+
+
+def _validate_report_records(data: dict[str, object]) -> None:
+    for key in ("componentTypes", "toggleCandidates", "warnings"):
+        _validate_string_list(data.get(key, []), key)
+
+    game_objects = data.get("gameObjects", [])
+    if not isinstance(game_objects, list) or len(game_objects) > 20000:
+        raise ValueError("Некорректный список объектов иерархии.")
+    for index, item in enumerate(game_objects):
+        label = f"gameObjects[{index}]"
+        if not isinstance(item, dict):
+            raise ValueError(f"Некорректная запись: {label}")
+        _validate_optional_text(item, "hierarchyPath", label)
+        _validate_string_list(item.get("componentTypes", []), f"{label}.componentTypes", limit=256)
+        if not isinstance(item.get("activeSelf", False), bool) or not isinstance(
+            item.get("activeInHierarchy", False), bool
+        ):
+            raise ValueError(f"Некорректное состояние активности: {label}")
+
+    descriptors = data.get("sdkDescriptors", [])
+    if not isinstance(descriptors, list) or len(descriptors) > 100:
+        raise ValueError("Некорректный список SDK-дескрипторов.")
+    for index, item in enumerate(descriptors):
+        label = f"sdkDescriptors[{index}]"
+        if not isinstance(item, dict):
+            raise ValueError(f"Некорректная запись: {label}")
+        for key in ("hierarchyPath", "expressionParametersAsset", "expressionsMenuAsset"):
+            _validate_optional_text(item, key, label)
+
+    animators = data.get("animators", [])
+    if not isinstance(animators, list) or len(animators) > 1000:
+        raise ValueError("Некорректный список Animator.")
+    for animator_index, animator in enumerate(animators):
+        label = f"animators[{animator_index}]"
+        if not isinstance(animator, dict):
+            raise ValueError(f"Некорректная запись Animator: {label}")
+        _validate_optional_text(animator, "hierarchyPath", label)
+        _validate_optional_text(animator, "controllerName", label)
+
+        parameters = animator.get("parameters", [])
+        if not isinstance(parameters, list) or len(parameters) > 2000:
+            raise ValueError(f"Некорректный список параметров Animator: {label}")
+        for parameter_index, parameter in enumerate(parameters):
+            parameter_label = f"{label}.parameters[{parameter_index}]"
+            if not isinstance(parameter, dict):
+                raise ValueError(f"Некорректная запись параметра: {parameter_label}")
+            for key in ("name", "type"):
+                _validate_optional_text(parameter, key, parameter_label)
+            for key in ("defaultFloat", "defaultInt"):
+                value = parameter.get(key)
+                if value is not None and (
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(value)
+                ):
+                    raise ValueError(f"Некорректное числовое поле: {parameter_label}.{key}")
+            if "defaultBool" in parameter and not isinstance(parameter["defaultBool"], bool):
+                raise ValueError(f"Некорректное логическое поле: {parameter_label}.defaultBool")
+
+        layers = animator.get("layers", [])
+        if not isinstance(layers, list) or len(layers) > 256:
+            raise ValueError(f"Некорректный список слоёв Animator: {label}")
+        for layer_index, layer in enumerate(layers):
+            layer_label = f"{label}.layers[{layer_index}]"
+            if not isinstance(layer, dict):
+                raise ValueError(f"Некорректная запись слоя: {layer_label}")
+            _validate_optional_text(layer, "name", layer_label)
+            states = layer.get("states", [])
+            if not isinstance(states, list) or len(states) > 10000:
+                raise ValueError(f"Некорректный список состояний: {layer_label}")
+            for state_index, state in enumerate(states):
+                state_label = f"{layer_label}.states[{state_index}]"
+                if not isinstance(state, dict):
+                    raise ValueError(f"Некорректная запись состояния: {state_label}")
+                for key in ("name", "fullPath", "motionName", "motionType"):
+                    _validate_optional_text(state, key, state_label)
+                transitions = state.get("transitions", [])
+                if not isinstance(transitions, list) or len(transitions) > 2000:
+                    raise ValueError(f"Некорректный список переходов: {state_label}")
+                for transition_index, transition in enumerate(transitions):
+                    transition_label = f"{state_label}.transitions[{transition_index}]"
+                    if not isinstance(transition, dict):
+                        raise ValueError(f"Некорректная запись перехода: {transition_label}")
+                    _validate_optional_text(transition, "destination", transition_label)
+                    _validate_string_list(
+                        transition.get("conditions", []),
+                        f"{transition_label}.conditions",
+                        limit=256,
+                    )
+                blend_children = state.get("blendChildren", [])
+                if not isinstance(blend_children, list) or len(blend_children) > 5000:
+                    raise ValueError(f"Некорректный список Blend Tree: {state_label}")
+                for child_index, child in enumerate(blend_children):
+                    child_label = f"{state_label}.blendChildren[{child_index}]"
+                    if not isinstance(child, dict):
+                        raise ValueError(f"Некорректный элемент Blend Tree: {child_label}")
+                    _validate_optional_text(child, "motionName", child_label)
+                    for key in ("threshold", "timeScale"):
+                        value = child.get(key)
+                        if value is not None and (
+                            isinstance(value, bool)
+                            or not isinstance(value, (int, float))
+                            or not math.isfinite(value)
+                        ):
+                            raise ValueError(f"Некорректное числовое поле: {child_label}.{key}")
+
+        overrides = animator.get("overrides", [])
+        if not isinstance(overrides, list) or len(overrides) > 5000:
+            raise ValueError(f"Некорректный список переопределений Animator: {label}")
+        for override_index, override in enumerate(overrides):
+            override_label = f"{label}.overrides[{override_index}]"
+            if not isinstance(override, dict):
+                raise ValueError(f"Некорректная запись переопределения: {override_label}")
+            for key in ("originalClipName", "overrideClipName"):
+                _validate_optional_text(override, key, override_label)
+
+
 def load_unity_inventory(path: Path) -> dict[str, object]:
-    """Load and validate the bounded JSON report exported by the Unity inspector."""
+    """Load and deeply validate the bounded JSON report exported by the Unity inspector."""
     source = path.expanduser().resolve(strict=True)
     if not source.is_file() or source.stat().st_size > 10 * 1024 * 1024:
         raise ValueError("Отчёт Unity должен быть файлом размером не более 10 МБ.")
@@ -158,17 +288,12 @@ def load_unity_inventory(path: Path) -> dict[str, object]:
         raise ValueError("Файл не является корректным JSON-отчётом Unity.") from exc
     if not isinstance(data, dict) or data.get("schemaVersion") != 1:
         raise ValueError("Неподдерживаемая версия формата отчёта Unity.")
-    if not isinstance(data.get("avatarName"), str) or not data["avatarName"].strip():
-        raise ValueError("В отчёте отсутствует имя аватара.")
-    for key in ("componentTypes", "toggleCandidates", "animators", "warnings"):
-        if not isinstance(data.get(key, []), list):
-            raise ValueError(f"Некорректное поле отчёта: {key}")
-    for animator in data.get("animators", []):
-        if not isinstance(animator, dict):
-            raise ValueError("Некорректная запись Animator.")
-        for key in ("parameters", "layers"):
-            if not isinstance(animator.get(key, []), list):
-                raise ValueError(f"Некорректное поле Animator: {key}")
+    avatar_name = data.get("avatarName")
+    if not isinstance(avatar_name, str) or not avatar_name.strip() or len(avatar_name) > 512:
+        raise ValueError("В отчёте отсутствует корректное имя аватара.")
+    for key in ("unityVersion", "generatedUtc"):
+        _validate_optional_text(data, key, "report")
+    _validate_report_records(data)
     return data
 
 
