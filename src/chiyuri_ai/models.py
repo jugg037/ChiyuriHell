@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol
-
-
-LOGGER = logging.getLogger(__name__)
 
 
 class Capability(StrEnum):
@@ -79,10 +75,12 @@ class ModelRouter:
 
     @staticmethod
     def _is_available(adapter: ModelAdapter) -> bool:
+        import logging
+
         try:
             return adapter.is_available()
         except Exception as exc:  # noqa: BLE001 - one broken adapter must not break routing
-            LOGGER.warning(
+            logging.getLogger(__name__).warning(
                 "Availability check failed for model %s (%s)",
                 adapter.model_id,
                 type(exc).__name__,
@@ -99,6 +97,8 @@ class ModelRouter:
         ]
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
+        import logging
+
         compatible = [
             adapter for adapter in self._adapters
             if request.capability in adapter.capabilities and self._is_available(adapter)
