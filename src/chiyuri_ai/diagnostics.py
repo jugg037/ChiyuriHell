@@ -6,8 +6,8 @@ import json
 import logging
 import logging.handlers
 import platform
-import sqlite3
 import re
+import sqlite3
 import sys
 import threading
 import zipfile
