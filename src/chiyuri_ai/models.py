@@ -97,8 +97,6 @@ class ModelRouter:
         ]
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
-        import logging
-
         compatible = [
             adapter for adapter in self._adapters
             if request.capability in adapter.capabilities and self._is_available(adapter)
@@ -110,7 +108,7 @@ class ModelRouter:
             try:
                 return adapter.generate(request)
             except Exception as exc:  # noqa: BLE001 - fall back to another configured provider
-                LOGGER.warning(
+                logging.getLogger(__name__).warning(
                     "Model adapter %s failed (%s)",
                     adapter.model_id,
                     type(exc).__name__,
