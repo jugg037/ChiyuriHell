@@ -153,10 +153,10 @@ class StatusWorker(QThread):
 class MainWindow(QMainWindow):
     """First usable local chat interface with persistent history."""
 
-    def __init__(self, paths: StoragePaths) -> None:
+    def __init__(self, paths: StoragePaths, diagnostics: DiagnosticCenter) -> None:
         super().__init__()
         self.paths = paths
-        self.diagnostics = DiagnosticCenter(paths.root / "Diagnostics")
+        self.diagnostics = diagnostics
         self.memory = ConversationMemory(paths.root / "Memory" / "conversations.sqlite3")
         self.personality_store = PersonalityStore(paths.root / "Personas")
         self.provider_store = ProviderStore(paths.providers)
@@ -305,7 +305,7 @@ class MainWindow(QMainWindow):
         ]
         self.chat.append(
             "<p><b>Самопроверка Chiyuri AI:</b></p><pre>"
-            + html.escape("\\n".join(lines))
+            + html.escape("\n".join(lines))
             + "</pre>"
         )
         if failed:
@@ -518,7 +518,7 @@ def main() -> int:
     diagnostics.install_exception_hooks()
     app = QApplication(sys.argv)
     app.setApplicationName("Chiyuri AI")
-    window = MainWindow(paths)
+    window = MainWindow(paths, diagnostics)
     window.show()
     return app.exec()
 
