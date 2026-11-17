@@ -43,3 +43,26 @@ def test_diagnostic_report_has_bounded_package_inventory(tmp_path):
     assert report["schema_version"] == 1
     assert report["application"]["name"] == "Chiyuri AI"
     assert len(report["packages"]) <= 8
+
+
+
+def test_self_check_reports_runtime_dependencies_and_storage(tmp_path):
+    center = DiagnosticCenter(tmp_path / "Diagnostics")
+
+    checks = center.run_self_check()
+
+    names = {item["name"] for item in checks}
+    assert "python_version" in names
+    assert "log_handler" in names
+    assert "diagnostics_storage" in names
+    assert "sqlite_fts5" in names
+    assert all(item["status"] in {"ok", "warning"} for item in checks)
+
+
+def test_report_includes_self_check_without_private_paths(tmp_path):
+    center = DiagnosticCenter(tmp_path / "private-user-path" / "Diagnostics")
+
+    report = center.build_report()
+
+    assert report["health_checks"]
+    assert "private-user-path" not in json.dumps(report)

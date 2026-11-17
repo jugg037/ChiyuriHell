@@ -223,12 +223,14 @@ class MainWindow(QMainWindow):
         self.model_library_button = QPushButton("Библиотека моделей")
         self.avatar_button = QPushButton("Аватар")
         self.diagnostics_button = QPushButton("Диагностика")
+        self.self_check_button = QPushButton("Самопроверка")
         self.persona_button.clicked.connect(self.create_personality)
         self.web_button.clicked.connect(self.search_web)
         self.provider_button.clicked.connect(self.manage_providers)
         self.model_library_button.clicked.connect(self.open_model_library)
         self.avatar_button.clicked.connect(self.open_avatar_manager)
         self.diagnostics_button.clicked.connect(self.export_diagnostics)
+        self.self_check_button.clicked.connect(self.run_diagnostics_check)
         self.send_button.clicked.connect(self.send_message)
 
         input_row = QHBoxLayout()
@@ -239,6 +241,7 @@ class MainWindow(QMainWindow):
         input_row.addWidget(self.model_library_button)
         input_row.addWidget(self.avatar_button)
         input_row.addWidget(self.diagnostics_button)
+        input_row.addWidget(self.self_check_button)
         input_row.addWidget(self.send_button)
 
         layout = QVBoxLayout()
@@ -291,6 +294,35 @@ class MainWindow(QMainWindow):
     def open_avatar_manager(self) -> None:
         dialog = AvatarManagerDialog(self.paths.avatars, self)
         dialog.exec()
+
+    def run_diagnostics_check(self) -> None:
+        checks = self.diagnostics.run_self_check()
+        failed = [item for item in checks if item["status"] != "ok"]
+        lines = [
+            f"{'✓' if item['status'] == 'ok' else '⚠'} "
+            f"{item['name']}: {item['detail']}"
+            for item in checks
+        ]
+        self.chat.append(
+            "<p><b>Самопроверка Chiyuri AI:</b></p><pre>"
+            + html.escape("\\n".join(lines))
+            + "</pre>"
+        )
+        if failed:
+            self.statusBar().showMessage(
+                f"Самопроверка завершена: предупреждений {len(failed)} из {len(checks)}",
+                12000,
+            )
+            self.diagnostics.logger.warning(
+                "Self-check reported %s warning(s): %s",
+                len(failed),
+                ", ".join(item["name"] for item in failed),
+            )
+        else:
+            self.statusBar().showMessage(
+                f"Самопроверка пройдена: {len(checks)} проверок", 8000
+            )
+            self.diagnostics.logger.info("Self-check passed: %s checks", len(checks))
 
     def export_diagnostics(self) -> None:
         destination, _ = QFileDialog.getSaveFileName(

@@ -6,13 +6,15 @@ import json
 import logging
 import logging.handlers
 import platform
+import sqlite3
 import re
 import sys
 import threading
 import zipfile
 from datetime import UTC, datetime
-from importlib import metadata
+from importlib import metadata, util
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 import psutil
@@ -92,9 +94,74 @@ class DiagnosticCenter:
             handler._chiyuri_diagnostics = True  # type: ignore[attr-defined]
             self.logger.addHandler(handler)
         self.logger.info("Diagnostics initialized for Chiyuri AI %s", __version__)
+        self._hooks_installed = False
+
+    def run_self_check(self) -> list[dict[str, str]]:
+        """Run safe local checks without reading conversations, credentials or model files."""
+        checks: list[dict[str, str]] = []
+
+        def add(name: str, ok: bool, detail: str) -> None:
+            checks.append(
+                {
+                    "name": name,
+                    "status": "ok" if ok else "warning",
+                    "detail": redact_text(detail)[:300],
+                }
+            )
+
+        add(
+            "python_version",
+            sys.version_info >= (3, 11),
+            f"Python {platform.python_version()}",
+        )
+        add(
+            "log_handler",
+            any(
+                getattr(handler, "_chiyuri_diagnostics", False)
+                for handler in self.logger.handlers
+            ),
+            "Файловый журнал подключён"
+            if any(
+                getattr(handler, "_chiyuri_diagnostics", False)
+                for handler in self.logger.handlers
+            )
+            else "Файловый журнал не подключён",
+        )
+        try:
+            with NamedTemporaryFile(dir=self.directory, prefix=".write-check-", delete=True):
+                pass
+            add("diagnostics_storage", True, "Каталог диагностики доступен для записи")
+        except OSError as exc:
+            add("diagnostics_storage", False, f"Нет доступа к каталогу: {type(exc).__name__}")
+
+        try:
+            with sqlite3.connect(":memory:") as connection:
+                connection.execute("CREATE VIRTUAL TABLE health_fts USING fts5(content)")
+                connection.execute("INSERT INTO health_fts(content) VALUES ('health check')")
+                row = connection.execute(
+                    "SELECT count(*) FROM health_fts WHERE health_fts MATCH 'health'"
+                ).fetchone()
+            add("sqlite_fts5", bool(row and row[0] == 1), "SQLite FTS5 доступен")
+        except sqlite3.Error as exc:
+            add("sqlite_fts5", False, f"SQLite FTS5 недоступен: {type(exc).__name__}")
+
+        for module_name in ("PySide6", "psutil", "huggingface_hub"):
+            try:
+                available = util.find_spec(module_name) is not None
+            except (ImportError, ValueError):
+                available = False
+            add(
+                f"dependency_{module_name.casefold()}",
+                available,
+                f"{module_name}: {'найден' if available else 'не найден'}",
+            )
+        return checks
 
     def install_exception_hooks(self) -> None:
         """Record otherwise-unhandled main-thread and Python worker-thread exceptions."""
+        if self._hooks_installed:
+            return
+        self._hooks_installed = True
         previous_sys_hook = sys.excepthook
 
         def handle_exception(exc_type: type[BaseException], exc: BaseException, tb: Any) -> None:
@@ -157,6 +224,7 @@ class DiagnosticCenter:
                 "cpu_count": psutil.cpu_count(logical=True),
             },
             "packages": self._installed_packages(),
+            "health_checks": self.run_self_check(),
             "privacy": {
                 "conversation_history_included": False,
                 "model_files_included": False,
