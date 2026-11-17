@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import logging
 import sys
+from pathlib import Path
 
 from PySide6.QtCore import QThread, QTimer, Signal
 from PySide6.QtWidgets import (

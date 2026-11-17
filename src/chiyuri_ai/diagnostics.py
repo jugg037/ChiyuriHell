@@ -22,14 +22,14 @@ from chiyuri_ai import __version__
 MAX_LOG_BYTES = 2 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 8 * 1024 * 1024
 _SECRET_PATTERNS = (
-    re.compile(r"(?i)(bearer\\s+)[A-Za-z0-9._~+/-]{8,}"),
+    re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/-]{8,}"),
     re.compile(r"(?i)(gh[pousr]_[A-Za-z0-9_]{12,})"),
     re.compile(r"(?i)(sk-[A-Za-z0-9_-]{12,})"),
     re.compile(
         r"(?i)(api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|secret|authorization)"
-        r"(\\s*[=:]\\s*)([\"']?)[^\\s,;\"']+"
+        r"(\s*[=:]\s*)([\"']?)[^\s,;\"']+"
     ),
-    re.compile(r"(?i)([?&](?:token|key|password|secret)=)[^&\\s]+"),
+    re.compile(r"(?i)([?&](?:token|key|password|secret)=)[^&\s]+"),
 )
 
 
@@ -38,9 +38,9 @@ def redact_text(value: str) -> str:
     result = str(value)
     for pattern in _SECRET_PATTERNS:
         if pattern.groups >= 3:
-            result = pattern.sub(r"\\1\\2[REDACTED]", result)
+            result = pattern.sub(r"\1\2[REDACTED]", result)
         elif pattern.groups == 2:
-            result = pattern.sub(r"\\1[REDACTED]", result)
+            result = pattern.sub(r"\1[REDACTED]", result)
         else:
             result = pattern.sub("[REDACTED]", result)
     try:
@@ -69,7 +69,11 @@ class DiagnosticCenter:
         self.logger = logging.getLogger("chiyuri_ai")
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
-        if not any(getattr(handler, "_chiyuri_diagnostics", False) for handler in self.logger.handlers):
+        has_handler = any(
+            getattr(handler, "_chiyuri_diagnostics", False)
+            for handler in self.logger.handlers
+        )
+        if not has_handler:
             handler = logging.handlers.RotatingFileHandler(
                 self.log_path,
                 maxBytes=MAX_LOG_BYTES,
@@ -177,8 +181,9 @@ class DiagnosticCenter:
                 continue
             if len(payload) > MAX_LOG_BYTES:
                 payload = payload[-MAX_LOG_BYTES:]
-            safe_lines = [redact_text(line) for line in payload.decode("utf-8", errors="replace").splitlines()]
-            logs.append((f"logs/{path.name}", ("\\n".join(safe_lines) + "\\n").encode("utf-8")))
+            decoded = payload.decode("utf-8", errors="replace")
+            safe_lines = [redact_text(line) for line in decoded.splitlines()]
+            logs.append((f"logs/{path.name}", ("\n".join(safe_lines) + "\n").encode("utf-8")))
         total_size = len(report_bytes) + sum(len(payload) for _, payload in logs)
         if total_size > MAX_ARCHIVE_BYTES:
             raise ValueError("Диагностический отчёт превышает установленный лимит размера.")
@@ -191,7 +196,8 @@ class DiagnosticCenter:
                     (
                         "Chiyuri AI diagnostic bundle.\n"
                         "Contains environment metadata and sanitized application logs.\n"
-                        "Does not contain chat history, model weights, provider credentials or environment variables.\n"
+                        "Does not contain chat history, model weights, provider credentials "
+                        "or environment variables.\n"
                         "Review the archive before sharing it.\n"
                     ),
                 )
