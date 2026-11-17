@@ -97,6 +97,8 @@ class ModelRouter:
         ]
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
+        import logging
+
         compatible = [
             adapter for adapter in self._adapters
             if request.capability in adapter.capabilities and self._is_available(adapter)
