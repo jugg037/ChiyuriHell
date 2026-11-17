@@ -235,13 +235,13 @@ class AvatarManagerDialog(QDialog):
         self.editor_executable = editors[0]
         self.editor_label.setText(str(self.editor_executable))
         self.report.append(
-            f"\\nНайдено установок Unity: {len(editors)}. "
-            f"Выбрана самая новая по номеру версии:\\n{self.editor_executable}"
+            f"\nНайдено установок Unity: {len(editors)}. "
+            f"Выбрана самая новая по номеру версии:\n{self.editor_executable}"
         )
         if len(editors) > 1:
             self.report.append(
-                "\\nДругие найденные установки:\\n"
-                + "\\n".join(str(path) for path in editors[1:])
+                "\nДругие найденные установки:\n"
+                + "\n".join(str(path) for path in editors[1:])
             )
 
     def scan_project(self) -> None:

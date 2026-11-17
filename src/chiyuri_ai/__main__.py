@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import html
+import logging
 import sys
 
 from PySide6.QtCore import QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QApplication,
+    QFileDialog,
     QHBoxLayout,
     QInputDialog,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QTextBrowser,
     QVBoxLayout,
@@ -20,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from chiyuri_ai import __version__
 from chiyuri_ai.avatar_manager import AvatarManagerDialog
+from chiyuri_ai.diagnostics import DiagnosticCenter
 from chiyuri_ai.llama_cpp import LlamaCppServerAdapter
 from chiyuri_ai.memory import ConversationMemory
 from chiyuri_ai.model_library_ui import ModelLibraryDialog
@@ -54,6 +58,7 @@ class ChatWorker(QThread):
             turn = self.service.send(self.conversation_id, self.message)
             self.completed.emit(turn.assistant_message, turn.model_id)
         except Exception as exc:  # noqa: BLE001 - surface backend failures in the chat
+            logging.getLogger(__name__).exception("Chat worker failed")
             self.failed.emit(str(exc))
 
 
@@ -88,6 +93,7 @@ class WebResearchWorker(QThread):
             )
             self.completed.emit(turn.assistant_message, turn.model_id, results)
         except Exception as exc:  # noqa: BLE001 - surface network and model errors
+            logging.getLogger(__name__).exception("Web research worker failed")
             self.failed.emit(str(exc))
 
 
@@ -114,6 +120,7 @@ class PersonaWorker(QThread):
             )
             self.completed.emit(profile.profile_id, profile.name)
         except Exception as exc:  # noqa: BLE001 - report model/profile errors in the UI
+            logging.getLogger(__name__).exception("Personality worker failed")
             self.failed.emit(str(exc))
 
 
@@ -148,6 +155,7 @@ class MainWindow(QMainWindow):
     def __init__(self, paths: StoragePaths) -> None:
         super().__init__()
         self.paths = paths
+        self.diagnostics = DiagnosticCenter(paths.root / "Diagnostics")
         self.memory = ConversationMemory(paths.root / "Memory" / "conversations.sqlite3")
         self.personality_store = PersonalityStore(paths.root / "Personas")
         self.provider_store = ProviderStore(paths.providers)
@@ -213,11 +221,13 @@ class MainWindow(QMainWindow):
         self.provider_button = QPushButton("ИИ-провайдеры")
         self.model_library_button = QPushButton("Библиотека моделей")
         self.avatar_button = QPushButton("Аватар")
+        self.diagnostics_button = QPushButton("Диагностика")
         self.persona_button.clicked.connect(self.create_personality)
         self.web_button.clicked.connect(self.search_web)
         self.provider_button.clicked.connect(self.manage_providers)
         self.model_library_button.clicked.connect(self.open_model_library)
         self.avatar_button.clicked.connect(self.open_avatar_manager)
+        self.diagnostics_button.clicked.connect(self.export_diagnostics)
         self.send_button.clicked.connect(self.send_message)
 
         input_row = QHBoxLayout()
@@ -227,6 +237,7 @@ class MainWindow(QMainWindow):
         input_row.addWidget(self.provider_button)
         input_row.addWidget(self.model_library_button)
         input_row.addWidget(self.avatar_button)
+        input_row.addWidget(self.diagnostics_button)
         input_row.addWidget(self.send_button)
 
         layout = QVBoxLayout()
@@ -279,6 +290,31 @@ class MainWindow(QMainWindow):
     def open_avatar_manager(self) -> None:
         dialog = AvatarManagerDialog(self.paths.avatars, self)
         dialog.exec()
+
+    def export_diagnostics(self) -> None:
+        destination, _ = QFileDialog.getSaveFileName(
+            self,
+            "Сохранить диагностический отчёт Chiyuri",
+            str(self.paths.root / "Diagnostics" / "Chiyuri-diagnostics.zip"),
+            "ZIP archive (*.zip)",
+        )
+        if not destination:
+            return
+        target = Path(destination)
+        if target.suffix.casefold() != ".zip":
+            target = target.with_suffix(".zip")
+        try:
+            saved = self.diagnostics.export_bundle(target)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Не удалось создать отчёт", str(exc))
+            return
+        QMessageBox.information(
+            self,
+            "Диагностика готова",
+            "Архив создан. Он содержит технические сведения и журналы ошибок, "
+            "но не содержит историю диалогов или файлы моделей. "
+            f"\n\n{saved}\n\nПрикрепи архив в разговоре для анализа.",
+        )
 
     def manage_providers(self) -> None:
         dialog = ProviderManagerDialog(
@@ -445,6 +481,8 @@ def main() -> int:
     """Start the desktop application."""
     paths = StoragePaths.from_environment()
     paths.create()
+    diagnostics = DiagnosticCenter(paths.root / "Diagnostics")
+    diagnostics.install_exception_hooks()
     app = QApplication(sys.argv)
     app.setApplicationName("Chiyuri AI")
     window = MainWindow(paths)
