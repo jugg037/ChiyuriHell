@@ -201,7 +201,7 @@ def _validate_report_records(data: dict[str, object]) -> None:
 
         parameters = animator.get("parameters", [])
         if not isinstance(parameters, list) or len(parameters) > 2000:
-            raise ValueError(f"Некорректный список параметров Animator: {label}")
+            raise ValueError(f"Некорректный список параметров Animator (parameters): {label}")
         for parameter_index, parameter in enumerate(parameters):
             parameter_label = f"{label}.parameters[{parameter_index}]"
             if not isinstance(parameter, dict):
